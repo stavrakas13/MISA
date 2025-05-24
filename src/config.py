@@ -9,7 +9,7 @@ from torch import optim
 import torch.nn as nn
 
 # path to a pretrained word embedding file
-word_emb_path = '/home/devamanyu/glove.840B.300d.txt'
+word_emb_path = '/content/MISA/glove/glove.840B.300d.txt'
 assert(word_emb_path is not None)
 
 
