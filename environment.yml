@@ -1,36 +1,36 @@
 name: misa-code-py39
-channel_priority: strict          # makes solver fast & deterministic
+channel_priority: strict        # faster, deterministic solver
 channels:
-  - pytorch                       # Torch binaries (1.11/0.12/0.11 trio)
+  - pytorch                     # has the 1.11 / CUDA 11.3 binaries
   - conda-forge
   - defaults
 
 dependencies:
-  # ── core interpreter ───────────────────────────────────────────────
-  - python          =3.9
+  # ── core interpreter ─────────────────────────────────────────────
+  - python            =3.9
   - pip
   - wheel
 
-  # ── numeric & plotting stack ───────────────────────────────────────
-  - numpy           =1.26.*
-  - scipy           =1.12.*
-  - pandas          =2.2.*
-  - scikit-learn    =1.4.*
-  - scikit-image    =0.22.*        # 0.23+ drops Py 3.9 support
-  - matplotlib      =3.9.*
+  # ── numeric & science stack ──────────────────────────────────────
+  - numpy             =1.26.*     # last NumPy to support 3.9
+  - scipy             =1.12.*
+  - pandas            =2.2.*
+  - scikit-learn      =1.4.*
+  - scikit-image      =0.22.*     # 0.23+ needs Py ≥ 3.10
+  - matplotlib        =3.9.*
   - pillow
   - cython
 
-  # ── PyTorch ecosystem (CUDA 11.3 build) ────────────────────────────
-  - cudatoolkit     =11.3          # comment out for CPU-only
-  - pytorch         =1.11.*
-  - torchvision     =0.12.*
-  - torchaudio      =0.11.*
+  # ── PyTorch + CUDA 11.3 (GPU) ────────────────────────────────────
+  - cudatoolkit       =11.3       # comment out for CPU runtime
+  - pytorch           =1.11.*
+  - torchvision       =0.12.*
+  - torchaudio        =0.11.*     # conda build for Torch 1.11
 
-  # ── Modern NLP stack ───────────────────────────────────────────────
-  - spacy           =3.7.*
+  # ── NLP stack ────────────────────────────────────────────────────
+  - spacy             =3.7.*
 
-  # ── low-level run-time libs we used to hard-pin to hashes ──────────
+  # ── runtime libs (un-pinned builds) ─────────────────────────────
   - openssl
   - libffi
   - zlib
@@ -38,155 +38,54 @@ dependencies:
   - ncurses
   - readline
 
-  # ── anything Conda doesn’t package (or you always installed w/ pip) ─
+  # ── pip-only packages ───────────────────────────────────────────
   - pip:
-      # core research libraries that depend on the Torch 1.11 ABI
+      # core research libs
       - allennlp==2.10.*
       - allennlp-models==2.10.*
-      - torch-geometric==2.0.4
-      - torch-scatter==2.0.9
-      - torch-sparse==0.6.12
-      - torch-cluster==1.5.9
-      - torch-spline-conv==1.2.1
-
-      # Hugging Face at a version accepted by AllenNLP
       - transformers==4.20.*
-      - tokenizers>=0.14.0
-      - sentencepiece>=0.1.99
 
-      # utility & notebook stack (unchanged)
-      - requests>=2.31
-      - tqdm>=4.67
+      # (torch-geometric & friends come later—see below)
+
+      # utility & notebook stack
       - jupyter
       - notebook
       - ipykernel
       - ipython
       - seaborn
+      - requests>=2.31
+      - tqdm>=4.67
 
-      # long-tail research helpers (exactly as you had them)
+      # keep the rest of your pure-Python helpers as needed …
       - absl-py
-      - alabaster
       - argparse
       - astor
-      - astroid
-      - atomicwrites
-      - babel
-      - backcall
       - bleach
-      - boto
       - boto3
-      - botocore
       - cachetools
-      - catalogue
-      - chardet
       - click
-      - conllu
       - decorator
-      - defusedxml
       - docopt
-      - docutils
-      - editdistance
-      - entrypoints
-      - filelock
-      - flaky
-      - flask
-      - flask-cors
       - ftfy>=5.8
-      - gast
       - gensim
-      - gevent
-      - google-auth
-      - google-auth-oauthlib
-      - google-pasta
-      - googledrivedownloader
-      - greenlet
       - grpcio
-      - idna
       - imageio
-      - imagesize
       - importlib-metadata
-      - ipython-genutils
-      - ipywidgets
-      - isodate
-      - isort
-      - itsdangerous
-      - jedi
-      - jinja2
-      - jmespath
-      - json-lines
-      - jsonlines
-      - jsonnet
-      - jsonpickle
-      - jsonschema
-      - jupyter-client
-      - jupyter-console
-      - jupyter-core
-      - keras-applications
-      - keras-preprocessing
-      - lazy-object-proxy
-      - markdown
-      - markupsafe
-      - mccabe
-      - mistune
-      - monotonic
-      - more-itertools
-      - nbconvert
-      - nbformat
-      - pandocfilters
-      - parsimonious
-      - parso
-      - pexpect
-      - pickleshare
-      - pipreqs
-      - plac
-      - pluggy
-      - plyfile
-      - prometheus-client
-      - prompt-toolkit
-      - ptyprocess
-      - py
-      - pyasn1
-      - pyasn1-modules
-      - pyconll
-      - pygments
-      - pylint
-      - pyrsistent
-      - pytest
-      - qtconsole
-      - rdflib
+      - joblib>=1.4
+      - networkx>=2.8
+      - nltk>=3.8
+      - packaging>=25
       - regex
-      - requests-oauthlib
-      - responses
-      - rsa
-      - s3transfer
       - sacremoses
-      - send2trash
       - smart-open
-      - snowballstemmer
-      - sphinx
-      - sphinxcontrib-applehelp
-      - sphinxcontrib-devhelp
-      - sphinxcontrib-htmlhelp
-      - sphinxcontrib-jsmath
-      - sphinxcontrib-qthelp
-      - sphinxcontrib-serializinghtml
-      - sqlparse
       - tensorboard
       - tensorboardx
-      - tensorflow-estimator
       - termcolor
-      - terminado
-      - testpath
       - tornado
       - traitlets
-      - typed-ast
       - unidecode
+      - urllib3>=2.2
       - validators
-      - wcwidth
-      - webencodings
-      - widgetsnbextension
-      - word2number
       - wrapt
-      - yarg
       - zipp
 
