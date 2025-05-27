@@ -1,34 +1,36 @@
 name: misa-code-py39
+channel_priority: strict          # makes solver fast & deterministic
 channels:
+  - pytorch                       # Torch binaries (1.11/0.12/0.11 trio)
   - conda-forge
-  - defaults                 # keep for system libs
+  - defaults
 
 dependencies:
-  # ── core interpreter ──────────────────────────────────────────────────
-  - python = 3.9
+  # ── core interpreter ───────────────────────────────────────────────
+  - python          =3.9
   - pip
   - wheel
 
-  # ── compiled numerical / ML stack ─────────────────────────────────────
-  - numpy              = 1.26.*      # last NumPy that supports 3.9
-  - scipy              = 1.12.*
-  - pandas             = 2.2.*
-  - scikit-learn       = 1.4.*
-  - scikit-image       = 0.22.*      # 0.23 requires ≥3.10
-  - matplotlib         = 3.9.*
+  # ── numeric & plotting stack ───────────────────────────────────────
+  - numpy           =1.26.*
+  - scipy           =1.12.*
+  - pandas          =2.2.*
+  - scikit-learn    =1.4.*
+  - scikit-image    =0.22.*        # 0.23+ drops Py 3.9 support
+  - matplotlib      =3.9.*
   - pillow
   - cython
 
-  # ---- PyTorch / CUDA ---------------------------------------------------
-  # comment out cudatoolkit + set pytorch cpuonly if you’re on CPU
-  - cudatoolkit        = 11.8
-  - pytorch            = 1.13.*
-  - torchvision        = 0.14.*
+  # ── PyTorch ecosystem (CUDA 11.3 build) ────────────────────────────
+  - cudatoolkit     =11.3          # comment out for CPU-only
+  - pytorch         =1.11.*
+  - torchvision     =0.12.*
+  - torchaudio      =0.11.*
 
-  # ---- NLP stack --------------------------------------------------------
-  - spacy              = 3.7.*       # brings modern cymem / srsly / blis
+  # ── Modern NLP stack ───────────────────────────────────────────────
+  - spacy           =3.7.*
 
-  # ---- essential system libs (un-pinned builds) ------------------------
+  # ── low-level run-time libs we used to hard-pin to hashes ──────────
   - openssl
   - libffi
   - zlib
@@ -36,12 +38,9 @@ dependencies:
   - ncurses
   - readline
 
-  # ── everything conda doesn’t package (or we prefer the wheel) ─────────
+  # ── anything Conda doesn’t package (or you always installed w/ pip) ─
   - pip:
-      # deep-learning audio (no conda py39 build)
-      - torchaudio==0.12.*
-
-      # unchanged pins that were already 3.9-ready
+      # core research libraries that depend on the Torch 1.11 ABI
       - allennlp==2.10.*
       - allennlp-models==2.10.*
       - torch-geometric==2.0.4
@@ -49,9 +48,13 @@ dependencies:
       - torch-sparse==0.6.12
       - torch-cluster==1.5.9
       - torch-spline-conv==1.2.1
-      - transformers==4.26.*
+
+      # Hugging Face at a version accepted by AllenNLP
+      - transformers==4.20.*
       - tokenizers>=0.14.0
       - sentencepiece>=0.1.99
+
+      # utility & notebook stack (unchanged)
       - requests>=2.31
       - tqdm>=4.67
       - jupyter
@@ -60,31 +63,7 @@ dependencies:
       - ipython
       - seaborn
 
-      # lifted caps on very old wheels (now resolver chooses py39 builds)
-      - cryptography>=42
-      - cffi>=1.17
-      - cymem>=2.0.8
-      - srsly>=2.4
-      - murmurhash>=1.0.9
-      - preshed>=3.0
-      - thinc>=8.2
-      - blis>=0.9
-      - pytz>=2023
-      - protobuf>=3.20
-      - ftfy>=5.8
-      - h5py>=3.13
-      - kiwisolver>=1.4
-      - cycler>=0.12
-      - joblib>=1.4
-      - networkx>=2.8
-      - nltk>=3.8
-      - oauthlib>=3.2
-      - packaging>=25
-      - pyparsing>=3.2
-      - urllib3>=2.2
-      - werkzeug>=3
-
-      # ---- long-tail pure-Python deps from your original list ----------
+      # long-tail research helpers (exactly as you had them)
       - absl-py
       - alabaster
       - argparse
@@ -112,6 +91,7 @@ dependencies:
       - flaky
       - flask
       - flask-cors
+      - ftfy>=5.8
       - gast
       - gensim
       - gevent
