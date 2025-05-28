@@ -1,10 +1,10 @@
 name: misa-code-py39
-channel_priority: strict        # faster, deterministic solver
+
 channels:
   - pytorch                     # has the 1.11 / CUDA 11.3 binaries
   - conda-forge
   - defaults
-  - intel
+
 dependencies:
   # ── core interpreter ─────────────────────────────────────────────
   - python            =3.9
