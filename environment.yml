@@ -12,7 +12,7 @@ dependencies:
   - wheel
 
   # ── numeric & science stack ──────────────────────────────────────
-  - numpy             =1.26.*     # last NumPy to support 3.9
+  - numpy             =1.24.4   # last NumPy to support 3.9
   - scipy             =1.12.*
   - pandas            =2.2.*
   - scikit-learn      =1.4.*
@@ -20,12 +20,14 @@ dependencies:
   - matplotlib        =3.9.*
   - pillow
   - cython
+  - filelock
+  - fsspec
 
   # ── PyTorch + CUDA 11.3 (GPU) ────────────────────────────────────
   - cudatoolkit       =11.3       # comment out for CPU runtime
-  - pytorch           =1.11.*
-  - torchvision       =0.12.*
-  - torchaudio        =0.11.*     # conda build for Torch 1.11
+  - pytorch           =1.10
+  - torchvision       =0.11
+  - torchaudio        =0.10     # conda build for Torch 1.11
 
   # ── NLP stack ────────────────────────────────────────────────────
   - spacy             =3.7.*
@@ -65,11 +67,13 @@ dependencies:
       - boto3
       - cachetools
       - click
+      - "datasets<2.8"
       - decorator
       - docopt
       - ftfy>=5.8
       - gensim
       - grpcio
+      - "huggingface-hub<0.11,>=0.8.1"
       - imageio
       - importlib-metadata
       - joblib>=1.4
@@ -82,6 +86,7 @@ dependencies:
       - tensorboard
       - tensorboardx
       - termcolor
+      - torch-geometric==2.0.4        # CPU wheel; pip will pull from the official PyG index
       - tornado
       - traitlets
       - unidecode
