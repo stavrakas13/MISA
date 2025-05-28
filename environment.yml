@@ -39,7 +39,7 @@ dependencies:
   - sqlite
   - ncurses
   - readline
-  -ittapi
+  - ittapi
 
   # ── pip-only packages ───────────────────────────────────────────
   - pip:
