@@ -164,8 +164,8 @@ class MISA(nn.Module):
         
     def extract_features(self, sequence, lengths, rnn1, rnn2, layer_norm):
         # move lengths to CPU and ensure it's long
-        cpu_lengths = lengths.to('cpu', dtype=torch.long) #modified...
-        packed_sequence = pack_padded_sequence(sequence, lengths)
+        cpu_lengths = lengths.cpu().long() #modified...
+        packed_sequence = pack_padded_sequence(sequence, cpu_lengths)
 
         if self.config.rnncell == "lstm":
             packed_h1, (final_h1, _) = rnn1(packed_sequence)
@@ -174,7 +174,7 @@ class MISA(nn.Module):
 
         padded_h1, _ = pad_packed_sequence(packed_h1)
         normed_h1 = layer_norm(padded_h1)
-        packed_normed_h1 = pack_padded_sequence(normed_h1, lengths)
+        packed_normed_h1 = pack_padded_sequence(normed_h1, cpu_lengths)
 
         if self.config.rnncell == "lstm":
             _, (final_h2, _) = rnn2(packed_normed_h1)
