@@ -1,13 +1,19 @@
 # MISA: Modality-Invariant and -Specific Representations for Multimodal Sentiment Analysis
-Code for the [ACM MM 2020](https://2020.acmmm.org) paper [MISA: Modality-Invariant and -Specific Representations for Multimodal Sentiment Analysis](https://arxiv.org/pdf/2005.03545.pdf)
+
 
 
 <p align="center">
   <img width="600" src="misa-pic.png">
 </p>
 
+In order to run on GPU:
+run the notebook MISA_GPU.ipynb
+
+In order to run on CPU:
+MISA_cpu.ipynb (not feasible... about 40' per epoch)
 
 
+Below are the steps i followed in order to make these notebooks.
 ### Setup the environment
 
 We work with a conda environment.
@@ -41,6 +47,8 @@ If this paper is useful for your research, please cite us at:
   journal={arXiv preprint arXiv:2005.03545},
   year={2020}
 }
+
+Code for the [ACM MM 2020](https://2020.acmmm.org) paper [MISA: Modality-Invariant and -Specific Representations for Multimodal Sentiment Analysis](https://arxiv.org/pdf/2005.03545.pdf)
 ```
 
 ### Contact
