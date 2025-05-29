@@ -1,11 +1,6 @@
 # MISA: Modality-Invariant and -Specific Representations for Multimodal Sentiment Analysis
 
 
-
-<p align="center">
-  <img width="600" src="misa-pic.png">
-</p>
-
 In order to run on GPU:
 run the notebook MISA_GPU.ipynb
 
