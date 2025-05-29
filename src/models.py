@@ -163,6 +163,8 @@ class MISA(nn.Module):
 
         
     def extract_features(self, sequence, lengths, rnn1, rnn2, layer_norm):
+        # move lengths to CPU and ensure it's long
+        cpu_lengths = lengths.to('cpu', dtype=torch.long) #modified...
         packed_sequence = pack_padded_sequence(sequence, lengths)
 
         if self.config.rnncell == "lstm":
