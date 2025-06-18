@@ -1,5 +1,6 @@
 import numpy as np
 import random
+import math
 
 import torch
 import torch.nn as nn
@@ -10,6 +11,8 @@ from transformers import BertModel, BertConfig
 from utils import to_gpu
 from utils import ReverseLayerF
 
+
+from mmlatch import Feedback
 
 def masked_mean(tensor, mask, dim):
     """Finding the mean along dim"""
@@ -53,14 +56,14 @@ class MISA(nn.Module):
             bertconfig = BertConfig.from_pretrained('bert-base-uncased', output_hidden_states=True)
             self.bertmodel = BertModel.from_pretrained('bert-base-uncased', config=bertconfig)
         else:
-            self.embed = nn.Embedding(len(config.word2id), input_sizes[0])
-            self.trnn1 = rnn(input_sizes[0], hidden_sizes[0], bidirectional=True)
+            self.embed = nn.Embedding(len(config.word2id), input_sizes[0]) 
+            self.trnn1 = rnn(input_sizes[0], hidden_sizes[0], bidirectional=True) #input/hidden_size[0] = text
             self.trnn2 = rnn(2*hidden_sizes[0], hidden_sizes[0], bidirectional=True)
         
-        self.vrnn1 = rnn(input_sizes[1], hidden_sizes[1], bidirectional=True)
+        self.vrnn1 = rnn(input_sizes[1], hidden_sizes[1], bidirectional=True) # 1 = visual
         self.vrnn2 = rnn(2*hidden_sizes[1], hidden_sizes[1], bidirectional=True)
         
-        self.arnn1 = rnn(input_sizes[2], hidden_sizes[2], bidirectional=True)
+        self.arnn1 = rnn(input_sizes[2], hidden_sizes[2], bidirectional=True) #2 is audio
         self.arnn2 = rnn(2*hidden_sizes[2], hidden_sizes[2], bidirectional=True)
 
 
@@ -159,9 +162,7 @@ class MISA(nn.Module):
         encoder_layer = nn.TransformerEncoderLayer(d_model=self.config.hidden_size, nhead=2)
         self.transformer_encoder = nn.TransformerEncoder(encoder_layer, num_layers=1)
 
-        
-
-        
+    
     def extract_features(self, sequence, lengths, rnn1, rnn2, layer_norm):
         # move lengths to CPU and ensure it's long
         cpu_lengths = lengths.cpu().long() #modified...
@@ -181,6 +182,10 @@ class MISA(nn.Module):
         else:
             _, final_h2 = rnn2(packed_normed_h1)
 
+        print(type(final_h1))
+        print(final_h1)
+        print(final_h2)
+        print(type(final_h2))
         return final_h1, final_h2
 
     def alignment(self, sentences, visual, acoustic, lengths, bert_sent, bert_sent_type, bert_sent_mask):
