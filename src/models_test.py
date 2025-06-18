@@ -200,8 +200,8 @@ class MISA(nn.Module):
         h1_a = None
 
         # --- MMLatch feedback on sequences ---
-        seq_t, seq_a, seq_v = self.feedback(
-            low_x=seq_t, low_y=seq_a, low_z=seq_v,
+        seq_t, seq_a, seq_v = self.feedback( #x=text, y=audio, z= visual
+            low_x=sentences, low_y=acoustic, low_z=visual,
             hi_x=seq_t,   hi_y=seq_a,   hi_z=seq_v,
             lengths=lengths
         )

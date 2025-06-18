@@ -181,10 +181,10 @@ class MISA(nn.Module):
             _, (final_h2, _) = rnn2(packed_normed_h1)
         else:
             _, final_h2 = rnn2(packed_normed_h1)
-
+        
         print(type(final_h1))
-        print(final_h1)
-        print(final_h2)
+        print(final_h1.shape)
+        print(final_h2.shape)
         print(type(final_h2))
         return final_h1, final_h2
 
