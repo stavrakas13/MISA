@@ -112,7 +112,7 @@ def get_config(parse=True, **optional_kwargs):
 
     # Data
     parser.add_argument('--data', type=str, default='mosi')
-
+    
     # Parse arguments
     if parse:
         kwargs = parser.parse_args()

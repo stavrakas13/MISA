@@ -132,6 +132,7 @@ class MISA(nn.Module):
             dropout=0.1,
             device=config.device
         )
+        
     
     def extract_features_seq(self, x, lengths, rnn1, rnn2, layer_norm):
         """
