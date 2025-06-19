@@ -9,7 +9,7 @@ from transformers import BertModel, BertConfig
 from utils import to_gpu
 from utils import ReverseLayerF
 
-from mmlatch.mm import Feedback   # MMLatch feedback block
+from mmlatch import Feedback   # MMLatch feedback block
 
 class MISA(nn.Module):
     def __init__(self, config):
