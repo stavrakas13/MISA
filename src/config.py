@@ -5,6 +5,7 @@ from collections import defaultdict
 from datetime import datetime
 from pathlib import Path
 import pprint
+import torch
 from torch import optim
 import torch.nn as nn
 
