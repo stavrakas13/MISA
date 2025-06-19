@@ -112,7 +112,7 @@ class MISA(nn.Module):
         self.fusion.add_module('fusion_layer_1', nn.Linear(in_features=self.config.hidden_size*6, out_features=self.config.hidden_size*3))
         self.fusion.add_module('fusion_layer_1_dropout', nn.Dropout(self.dropout_rate))
         self.fusion.add_module('fusion_layer_1_activation', self.activation)
-        self.fusion.add_module('fusion_layer_3', nn.Linear(in_features=self.config.hidden_size*3, out_features= output_size))
+        self.fusion.add_module('fusion_layer_3', nn.Linear(in_features=self.config.hidden_size*3, out_features= self.output_size))
 
         encoder_layer = nn.TransformerEncoderLayer(d_model=self.config.hidden_size, nhead=2)
         self.transformer_encoder = nn.TransformerEncoder(encoder_layer, num_layers=1)
