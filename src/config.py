@@ -105,6 +105,8 @@ def get_config(parse=True, **optional_kwargs):
     parser.add_argument('--reverse_grad_weight', type=float, default=1.0)
     # Selectin activation from 'elu', "hardshrink", "hardtanh", "leakyrelu", "prelu", "relu", "rrelu", "tanh"
     parser.add_argument('--activation', type=str, default='relu')
+    
+    parser.add_argument('--device', type=str, default='cuda' if torch.cuda.is_available() else 'cpu',help="compute device (cpu or cuda)") #added
 
     # Model
     parser.add_argument('--model', type=str,
