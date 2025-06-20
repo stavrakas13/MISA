@@ -139,6 +139,7 @@ class MISA(nn.Module):
         Return full sequence (B x L x H) and final hidden (B x H)
         from two-layer BiRNN.
         """
+        lengths = lengths.clamp(min=1, max=x.size(1))        # ← NEW
         cpu_l = lengths.cpu().long()
         packed1 = pack_padded_sequence(x, cpu_l, batch_first=True, enforce_sorted=False)
         out1, _ = rnn1(packed1)
@@ -152,7 +153,8 @@ class MISA(nn.Module):
         return seq, h2.squeeze(0)
 
     def extract_features(self, sequence, lengths, rnn1, rnn2, layer_norm):
-        # move lengths to CPU and ensure it's long
+        # move lengths to CPU and ensure it's long\
+        lengths = lengths.clamp(min=1, max=sequence.size(1)) # ← NEW
         cpu_lengths = lengths.cpu().long()
         packed_sequence = pack_padded_sequence(sequence, cpu_lengths)
 
