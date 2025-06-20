@@ -226,21 +226,31 @@ class FeedbackUnit(nn.Module):
     #     x_new = x * mask
     #     return x_new
     
+    # def forward(self, x, y, z, lengths=None):
+    #     mask = self.get_mask(y, z, lengths=lengths)
+    #     mask = F.dropout(mask, p=0.2)
+
+    #     # ──► εναρμόνιση μήκους (B, Lx, D) ↔ (B, Lmask, D)
+    #     if mask.size(1) != x.size(1):
+    #         # (B, L, D) → (B, D, L) για 1-D interpolation
+    #         mask = mask.transpose(1, 2)
+    #         mask = F.interpolate(
+    #             mask, size=x.size(1), mode="nearest"   # ή "linear" αν θες λείανση
+    #         )
+    #         mask = mask.transpose(1, 2)               # πίσω στο (B, L, D)
+
+    #     x_new = x * mask
+    #     return x_new
     def forward(self, x, y, z, lengths=None):
         mask = self.get_mask(y, z, lengths=lengths)
         mask = F.dropout(mask, p=0.2)
 
-        # ──► εναρμόνιση μήκους (B, Lx, D) ↔ (B, Lmask, D)
-        if mask.size(1) != x.size(1):
-            # (B, L, D) → (B, D, L) για 1-D interpolation
-            mask = mask.transpose(1, 2)
-            mask = F.interpolate(
-                mask, size=x.size(1), mode="nearest"   # ή "linear" αν θες λείανση
-            )
-            mask = mask.transpose(1, 2)               # πίσω στο (B, L, D)
+        # Ensure alignment of sequence length (B, Lx, D) ↔ (B, Lmask, D)
+        mask = mask.transpose(1, 2)  # (B, D, Lmask)
+        mask = F.interpolate(mask, size=x.size(1), mode="nearest")  # or "linear"
+        mask = mask.transpose(1, 2)  # (B, Lx, D)
 
-        x_new = x * mask
-        return x_new
+        return x * mask
 
 
 
