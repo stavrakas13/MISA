@@ -144,8 +144,8 @@ class FeedbackUnit(nn.Module):
         self,
         hidden_dim,
         mod1_sz,
-        mod2_sz,  # ΝΕΟ
-        mod3_sz,  # ΝΕΟ
+        hi_y_size,  # νέο όρισμα: actual feature size του hi_y
+        hi_z_size,  # νέο όρισμα: actual feature size του hi_z
         mask_type="learnable_sequence_mask",
         dropout=0.1,
         device="cpu",
@@ -153,11 +153,10 @@ class FeedbackUnit(nn.Module):
         super(FeedbackUnit, self).__init__()
         self.mask_type = mask_type
         self.mod1_sz = mod1_sz
-        self.mod2_sz = mod2_sz  # ΝΕΟ
-        self.mod3_sz = mod3_sz  # ΝΕΟ
         self.hidden_dim = hidden_dim
+        
 
-        # Αυτά αφαιρούνται γιατί δεν χρησιμοποιούν τα σωστά input sizes
+        # αρχικός κώδικας - δεν έπαιρνε υπόψη το πραγματικό μέγεθος του input
         # if mask_type == "learnable_sequence_mask":
         #     self.mask1 = RNN_latch(hidden_dim, mod1_sz, dropout=dropout, device=device)
         #     self.mask2 = RNN_latch(hidden_dim, mod1_sz, dropout=dropout, device=device)
@@ -165,13 +164,13 @@ class FeedbackUnit(nn.Module):
         #     self.mask1 = nn.Linear(hidden_dim, mod1_sz)
         #     self.mask2 = nn.Linear(hidden_dim, mod1_sz)
 
-        # ΝΕΟ: Χρήση σωστών input sizes από mod2_sz και mod3_sz
+        # νέος κώδικας: χρησιμοποιεί το σωστό input_size για κάθε modality
         if mask_type == "learnable_sequence_mask":
-            self.mask1 = RNN_latch(input_size=mod2_sz, hidden_size=mod1_sz, dropout=dropout, device=device)
-            self.mask2 = RNN_latch(input_size=mod3_sz, hidden_size=mod1_sz, dropout=dropout, device=device)
+            self.mask1 = RNN_latch(input_size=hi_y_size, hidden_size=mod1_sz, dropout=dropout, device=device)
+            self.mask2 = RNN_latch(input_size=hi_z_size, hidden_size=mod1_sz, dropout=dropout, device=device)
         else:
-            self.mask1 = nn.Linear(mod2_sz, mod1_sz)
-            self.mask2 = nn.Linear(mod3_sz, mod1_sz)
+            self.mask1 = nn.Linear(hi_y_size, mod1_sz)
+            self.mask2 = nn.Linear(hi_z_size, mod1_sz)
 
         mask_fn = {
             "learnable_static_mask": self._learnable_static_mask,
@@ -183,7 +182,6 @@ class FeedbackUnit(nn.Module):
     def _learnable_sequence_mask(self, y, z, lengths=None):
         oy, _, _ = self.mask1(y, lengths)
         oz, _, _ = self.mask2(z, lengths)
-
         lg = (torch.sigmoid(oy) + torch.sigmoid(oz)) * 0.5
         mask = lg
         return mask
@@ -215,33 +213,48 @@ class Feedback(nn.Module):
         device="cpu",
     ):
         super(Feedback, self).__init__()
+
+        # αρχικός κώδικας - δεν περνούσε τις πραγματικές διαστάσεις του hi_y και hi_z
+        # self.f1 = FeedbackUnit(
+        #     hidden_dim,
+        #     mod1_sz,
+        #     mask_type=mask_type,
+        #     dropout=dropout,
+        #     device=device,
+        # )
+
+        # νέος κώδικας - περνάμε τις πραγματικές διαστάσεις: hi_y_size = 2 * mod2_sz, hi_z_size = 2 * mod3_sz
         self.f1 = FeedbackUnit(
             hidden_dim,
             mod1_sz,
-            mod2_sz,
-            mod3_sz,
+            hi_y_size=2 * mod2_sz,
+            hi_z_size=2 * mod3_sz,
             mask_type=mask_type,
             dropout=dropout,
             device=device,
         )
+
         self.f2 = FeedbackUnit(
             hidden_dim,
             mod2_sz,
-            mod1_sz,
-            mod3_sz,
+            hi_y_size=2 * mod1_sz,
+            hi_z_size=2 * mod3_sz,
             mask_type=mask_type,
             dropout=dropout,
             device=device,
         )
+
         self.f3 = FeedbackUnit(
             hidden_dim,
             mod3_sz,
-            mod1_sz,
-            mod2_sz,
+            hi_y_size=2 * mod1_sz,
+            hi_z_size=2 * mod2_sz,
             mask_type=mask_type,
             dropout=dropout,
             device=device,
         )
+        print(f"mod2_sz: {mod2_sz}, 2 * mod2_sz = {2 * mod2_sz}")
+
 
     def forward(self, low_x, low_y, low_z, hi_x, hi_y, hi_z, lengths=None):
         x = self.f1(low_x, hi_y, hi_z, lengths=lengths)
