@@ -96,15 +96,15 @@ def get_loader(config, shuffle=True):
         # ----- PAD THE THREE MODALITIES SEPARATELY -------------------- added
         # sentences: List[LongTensor [len_t_i]]
         sentences  = pad_sequence(
-            [torch.LongTensor(s[0][0]) for s in batch], batch_first=False, padding_value=PAD)
+            [torch.LongTensor(s[0][0]) for s in batch], batch_first=True, padding_value=PAD)
 
         # video   : List[FloatTensor [len_v_i, visual_size]]
         visual     = pad_sequence(
-            [torch.FloatTensor(s[0][1]) for s in batch], batch_first=False)
+            [torch.FloatTensor(s[0][1]) for s in batch], batch_first=True)
 
         # acoustic: List[FloatTensor [len_a_i, acoustic_size]]
         acoustic   = pad_sequence(
-            [torch.FloatTensor(s[0][2]) for s in batch], batch_first=False)
+            [torch.FloatTensor(s[0][2]) for s in batch], batch_first=True)
 
         # ----- BUILD 3 LENGTH TENSORS ---------------------------------
         len_t = torch.LongTensor([s[0][0].shape[0] for s in batch])   # words / tokens
