@@ -186,10 +186,15 @@ class MISA(nn.Module):
                 token_type_ids=bert_type,
                 return_dict=True
             ).last_hidden_state
-            raw_t = self.bertmodel.embeddings(
-                input_ids      = bert_sent,
-                token_type_ids = bert_type
-            )
+            if self.config.use_bert:
+                # WordPiece + position + segment embeddings: (B, L, 768)
+                raw_t = self.bertmodel.embeddings(
+                    input_ids      = bert_sent,
+                    token_type_ids = bert_type
+                )
+            else:
+                # GloVe ή word2vec embeddings: (B, L, embedding_size)
+                raw_t = self.embed(sentences)   
             mask_len = bert_mask.sum(1, keepdim=True)
             seq_t = (bert_out * bert_mask.unsqueeze(2)).sum(1) / mask_len
             seq_t = seq_t.unsqueeze(1)
@@ -208,10 +213,14 @@ class MISA(nn.Module):
         h1_a = None
 
         # --- MMLatch feedback on sequences ---
-        seq_t, seq_a, seq_v = self.feedback( #x=text, y=audio, z= visual
-            low_x=raw_t, low_y=acoustic, low_z=visual,
-            hi_x=seq_t,   hi_y=seq_a,   hi_z=seq_v,
-            lengths=lengths
+        seq_t, seq_a, seq_v = self.feedback(
+            low_x = raw_t,       # raw TEXT   (B, L, text_size)
+            low_y = acoustic,    # raw AUDIO  (B, L, acoustic_size)
+            low_z = visual,      # raw VISION (B, L, visual_size)
+            hi_x  = seq_t,       # contextualised text
+            hi_y  = seq_a,       # contextualised audio
+            hi_z  = seq_v,       # contextualised vision
+            lengths = lengths
         )
 
         # Stage II: re-encode masked sequences
