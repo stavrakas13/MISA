@@ -139,12 +139,13 @@ class RNN_latch(nn.Module):
 
         return out, last_timestep, hidden
 
-
 class FeedbackUnit(nn.Module):
     def __init__(
         self,
         hidden_dim,
         mod1_sz,
+        mod2_sz,  # ΝΕΟ
+        mod3_sz,  # ΝΕΟ
         mask_type="learnable_sequence_mask",
         dropout=0.1,
         device="cpu",
@@ -152,21 +153,25 @@ class FeedbackUnit(nn.Module):
         super(FeedbackUnit, self).__init__()
         self.mask_type = mask_type
         self.mod1_sz = mod1_sz
+        self.mod2_sz = mod2_sz  # ΝΕΟ
+        self.mod3_sz = mod3_sz  # ΝΕΟ
         self.hidden_dim = hidden_dim
-# 
+
+        # Αυτά αφαιρούνται γιατί δεν χρησιμοποιούν τα σωστά input sizes
         # if mask_type == "learnable_sequence_mask":
         #     self.mask1 = RNN_latch(hidden_dim, mod1_sz, dropout=dropout, device=device)
         #     self.mask2 = RNN_latch(hidden_dim, mod1_sz, dropout=dropout, device=device)
         # else:
         #     self.mask1 = nn.Linear(hidden_dim, mod1_sz)
         #     self.mask2 = nn.Linear(hidden_dim, mod1_sz)
+
+        # ΝΕΟ: Χρήση σωστών input sizes από mod2_sz και mod3_sz
         if mask_type == "learnable_sequence_mask":
             self.mask1 = RNN_latch(input_size=mod2_sz, hidden_size=mod1_sz, dropout=dropout, device=device)
             self.mask2 = RNN_latch(input_size=mod3_sz, hidden_size=mod1_sz, dropout=dropout, device=device)
         else:
             self.mask1 = nn.Linear(mod2_sz, mod1_sz)
             self.mask2 = nn.Linear(mod3_sz, mod1_sz)
-
 
         mask_fn = {
             "learnable_static_mask": self._learnable_static_mask,
@@ -180,9 +185,7 @@ class FeedbackUnit(nn.Module):
         oz, _, _ = self.mask2(z, lengths)
 
         lg = (torch.sigmoid(oy) + torch.sigmoid(oz)) * 0.5
-
         mask = lg
-
         return mask
 
     def _learnable_static_mask(self, y, z, lengths=None):
@@ -191,14 +194,12 @@ class FeedbackUnit(nn.Module):
         mask1 = torch.sigmoid(y)
         mask2 = torch.sigmoid(z)
         mask = (mask1 + mask2) * 0.5
-
         return mask
 
     def forward(self, x, y, z, lengths=None):
         mask = self.get_mask(y, z, lengths=lengths)
         mask = F.dropout(mask, p=0.2)
         x_new = x * mask
-
         return x_new
 
 
@@ -217,6 +218,8 @@ class Feedback(nn.Module):
         self.f1 = FeedbackUnit(
             hidden_dim,
             mod1_sz,
+            mod2_sz,
+            mod3_sz,
             mask_type=mask_type,
             dropout=dropout,
             device=device,
@@ -224,6 +227,8 @@ class Feedback(nn.Module):
         self.f2 = FeedbackUnit(
             hidden_dim,
             mod2_sz,
+            mod1_sz,
+            mod3_sz,
             mask_type=mask_type,
             dropout=dropout,
             device=device,
@@ -231,6 +236,8 @@ class Feedback(nn.Module):
         self.f3 = FeedbackUnit(
             hidden_dim,
             mod3_sz,
+            mod1_sz,
+            mod2_sz,
             mask_type=mask_type,
             dropout=dropout,
             device=device,
@@ -239,6 +246,5 @@ class Feedback(nn.Module):
     def forward(self, low_x, low_y, low_z, hi_x, hi_y, hi_z, lengths=None):
         x = self.f1(low_x, hi_y, hi_z, lengths=lengths)
         y = self.f2(low_y, hi_x, hi_z, lengths=lengths)
-        z = self.f3(low_z, hi_x, hi_y, lengths=lengths) #do we need lengths here ?
-
+        z = self.f3(low_z, hi_x, hi_y, lengths=lengths)
         return x, y, z
