@@ -254,6 +254,7 @@ class Feedback(nn.Module):
         mask_type="learnable_sequence_mask",
         dropout=0.1,
         device="cpu",
+        use_bert=True
     ):
         super(Feedback, self).__init__()
 
@@ -265,7 +266,7 @@ class Feedback(nn.Module):
         #     dropout=dropout,
         #     device=device,
         # )
-
+        text_hi=mod1_sz if use_bert else 2 * mod1_sz
         # νέος κώδικας - περνάμε τις πραγματικές διαστάσεις: hi_y_size = 2 * mod2_sz, hi_z_size = 2 * mod3_sz
         self.f1 = FeedbackUnit(
             hidden_dim,
@@ -280,7 +281,8 @@ class Feedback(nn.Module):
         self.f2 = FeedbackUnit(
             hidden_dim,
             mod2_sz,
-            hi_y_size=2 * mod1_sz,
+            hi_y_size=text_hi,
+            # hi_y_size=2 * mod1_sz,
             hi_z_size=2 * mod3_sz,
             mask_type=mask_type,
             dropout=dropout,
@@ -290,7 +292,8 @@ class Feedback(nn.Module):
         self.f3 = FeedbackUnit(
             hidden_dim,
             mod3_sz,
-            hi_y_size=2 * mod1_sz,
+            # hi_y_size=2 * mod1_sz,
+            hi_y_size=text_hi,
             hi_z_size=2 * mod2_sz,
             mask_type=mask_type,
             dropout=dropout,
