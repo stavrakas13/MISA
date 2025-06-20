@@ -16,7 +16,9 @@ class MISA(nn.Module):
         super(MISA, self).__init__()
 
         self.config = config
-        self.text_size     = config.embedding_size
+        # self.text_size     = config.embedding_size
+        self.text_size     = 768 if config.use_bert else config.embedding_size
+
         self.visual_size   = config.visual_size
         self.acoustic_size = config.acoustic_size
 
@@ -184,7 +186,10 @@ class MISA(nn.Module):
                 token_type_ids=bert_type,
                 return_dict=True
             ).last_hidden_state
-            
+            raw_t = self.bertmodel.embeddings(
+                input_ids      = bert_sent,
+                token_type_ids = bert_type
+            )
             mask_len = bert_mask.sum(1, keepdim=True)
             seq_t = (bert_out * bert_mask.unsqueeze(2)).sum(1) / mask_len
             seq_t = seq_t.unsqueeze(1)
@@ -204,7 +209,7 @@ class MISA(nn.Module):
 
         # --- MMLatch feedback on sequences ---
         seq_t, seq_a, seq_v = self.feedback( #x=text, y=audio, z= visual
-            low_x=sentences, low_y=acoustic, low_z=visual,
+            low_x=raw_t, low_y=acoustic, low_z=visual,
             hi_x=seq_t,   hi_y=seq_a,   hi_z=seq_v,
             lengths=lengths
         )
