@@ -93,7 +93,25 @@ def get_loader(config, shuffle=True):
         # lengths are useful later in using RNNs
         lengths = torch.LongTensor([sample[0][0].shape[0] for sample in batch])
 
-        return sentences, visual, acoustic, labels, lengths, bert_sentences, bert_sentence_types, bert_sentence_att_mask
+        # ----- PAD THE THREE MODALITIES SEPARATELY -------------------- added
+        # sentences: List[LongTensor [len_t_i]]
+        sentences  = pad_sequence(
+            [torch.LongTensor(s[0][0]) for s in batch], batch_first=False, padding_value=PAD)
+
+        # video   : List[FloatTensor [len_v_i, visual_size]]
+        visual     = pad_sequence(
+            [torch.FloatTensor(s[0][1]) for s in batch], batch_first=False)
+
+        # acoustic: List[FloatTensor [len_a_i, acoustic_size]]
+        acoustic   = pad_sequence(
+            [torch.FloatTensor(s[0][2]) for s in batch], batch_first=False)
+
+        # ----- BUILD 3 LENGTH TENSORS ---------------------------------
+        len_t = torch.LongTensor([s[0][0].shape[0] for s in batch])   # words / tokens
+        len_v = torch.LongTensor([s[0][1].shape[0] for s in batch])   # video frames kept
+        len_a = torch.LongTensor([s[0][2].shape[0] for s in batch])   # audio frames kept
+        
+        return sentences, visual, acoustic, labels, lengths, len_t, len_v, len_a, bert_sentences, bert_sentence_types, bert_sentence_att_mask
 
 
     data_loader = DataLoader(

@@ -172,7 +172,7 @@ class MISA(nn.Module):
 
         return final_h1, final_h2
 
-    def alignment(self, sentences, visual, acoustic, lengths,
+    def alignment(self, sentences, visual, acoustic, lengths, len_t, len_v, len_a,
                   bert_sent, bert_type, bert_mask):
         # Stage I: extract full sequences + states
         if self.config.use_bert:
@@ -190,14 +190,14 @@ class MISA(nn.Module):
         else:
             emb_t = self.embed(sentences)
             seq_t, h2_t = self.extract_features_seq(
-                emb_t, lengths, self.trnn1, self.trnn2, self.tlayer_norm)
+                emb_t, len_t, self.trnn1, self.trnn2, self.tlayer_norm)
             h1_t = None  # unused
 
         seq_v, h2_v = self.extract_features_seq(
-            visual, lengths, self.vrnn1, self.vrnn2, self.vlayer_norm)
+            visual, len_v, self.vrnn1, self.vrnn2, self.vlayer_norm)
         h1_v = None
         seq_a, h2_a = self.extract_features_seq(
-            acoustic, lengths, self.arnn1, self.arnn2, self.alayer_norm)
+            acoustic, len_a, self.arnn1, self.arnn2, self.alayer_norm)
         h1_a = None
 
         # --- MMLatch feedback on sequences ---
@@ -272,7 +272,7 @@ class MISA(nn.Module):
         self.utt_shared_v  = self.shared(uv)
         self.utt_shared_a  = self.shared(ua)
 
-    def forward(self, sentences, video, acoustic, lengths,
+    def forward(self, sentences, video, acoustic, lengths, len_t, len_v, len_a,
                 bert_sent, bert_type, bert_mask):
         return self.alignment(sentences, video, acoustic,
-                              lengths, bert_sent, bert_type, bert_mask)
+                              lengths, len_t, len_v, len_a, bert_sent, bert_type, bert_mask)

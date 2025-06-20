@@ -232,6 +232,6 @@ class Feedback(nn.Module):
     def forward(self, low_x, low_y, low_z, hi_x, hi_y, hi_z, lengths=None):
         x = self.f1(low_x, hi_y, hi_z, lengths=lengths)
         y = self.f2(low_y, hi_x, hi_z, lengths=lengths)
-        z = self.f3(low_z, hi_x, hi_y, lengths=lengths)
+        z = self.f3(low_z, hi_x, hi_y, lengths=lengths) #do we need lengths here ?
 
         return x, y, z
