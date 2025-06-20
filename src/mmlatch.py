@@ -11,7 +11,8 @@ class PadPackedSequence(nn.Module):
         self.batch_first = batch_first
 
     def forward(self, x, lengths):
-        max_length = lengths.max().item()
+        max_length = lengths.cpu().long().max().item()
+
         x, _ = pad_packed_sequence(
             x, batch_first=self.batch_first, total_length=max_length
         )
