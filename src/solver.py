@@ -202,7 +202,7 @@ class Solver(object):
 
             for batch in dataloader:
                 self.model.zero_grad()
-                t, v, a, y, l, bert_sent, bert_sent_type, bert_sent_mask = batch
+                t, v, a, y, l,len_t, len_v, len_a,bert_sent, bert_sent_type, bert_sent_mask = batch 
 
                 t = to_gpu(t)
                 v = to_gpu(v)
@@ -212,8 +212,11 @@ class Solver(object):
                 bert_sent = to_gpu(bert_sent)
                 bert_sent_type = to_gpu(bert_sent_type)
                 bert_sent_mask = to_gpu(bert_sent_mask)
+                len_t=to_gpu(len_t)
+                len_v=to_gpu(len_v)
+                len_a=to_gpu(len_a)
 
-                y_tilde = self.model(t, v, a, l, bert_sent, bert_sent_type, bert_sent_mask)
+                y_tilde = self.model(t, v, a, l, len_t, len_v, len_a,bert_sent, bert_sent_type, bert_sent_mask)
 
                 if self.train_config.data == "ur_funny":
                     y = y.squeeze()
