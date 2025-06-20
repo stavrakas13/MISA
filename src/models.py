@@ -144,6 +144,7 @@ class MISA(nn.Module):
         lengths = lengths.clamp(min=1, max=x.size(1))        # ← NEW
         cpu_l = lengths.cpu().long()
         packed1 = pack_padded_sequence(x, cpu_l, batch_first=True, enforce_sorted=False)
+
         out1, _ = rnn1(packed1)
         seq, _ = pad_packed_sequence(out1, batch_first=True)
         seq = layer_norm(seq)
@@ -158,7 +159,7 @@ class MISA(nn.Module):
         # move lengths to CPU and ensure it's long\
         lengths = lengths.clamp(min=1, max=sequence.size(1)) # ← NEW
         cpu_lengths = lengths.cpu().long()
-        packed_sequence = pack_padded_sequence(sequence, cpu_lengths)
+        packed_sequence = pack_padded_sequence(sequence, cpu_lengths, batch_first=True, enforce_sorted=False)
 
         if self.config.rnncell == "lstm":
             packed_h1, (final_h1, _) = rnn1(packed_sequence)
@@ -167,7 +168,8 @@ class MISA(nn.Module):
 
         padded_h1, _ = pad_packed_sequence(packed_h1)
         normed_h1 = layer_norm(padded_h1)
-        packed_normed_h1 = pack_padded_sequence(normed_h1, cpu_lengths)
+        packed_normed_h1 = pack_padded_sequence(normed_h1, cpu_lengths, batch_first=True, enforce_sorted=False)
+
 
         if self.config.rnncell == "lstm":
             _, (final_h2, _) = rnn2(packed_normed_h1)
