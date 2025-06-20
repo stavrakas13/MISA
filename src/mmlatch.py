@@ -153,10 +153,14 @@ class FeedbackUnit(nn.Module):
         self.mask_type = mask_type
         self.mod1_sz = mod1_sz
         self.hidden_dim = hidden_dim
-
+# # 
+#         if mask_type == "learnable_sequence_mask":
+#             self.mask1 = RNN_latch(hidden_dim, mod1_sz, dropout=dropout, device=device)
+#             self.mask2 = RNN_latch(hidden_dim, mod1_sz, dropout=dropout, device=device)
         if mask_type == "learnable_sequence_mask":
-            self.mask1 = RNN_latch(hidden_dim, mod1_sz, dropout=dropout, device=device)
-            self.mask2 = RNN_latch(hidden_dim, mod1_sz, dropout=dropout, device=device)
+            # FIX: swap arg order → (input_size = mod1_sz, hidden_size = hidden_dim)
+            self.mask1 = RNN_latch(mod1_sz, hidden_dim, dropout=dropout, device=device)
+            self.mask2 = RNN_latch(mod1_sz, hidden_dim, dropout=dropout, device=device)
         else:
             self.mask1 = nn.Linear(hidden_dim, mod1_sz)
             self.mask2 = nn.Linear(hidden_dim, mod1_sz)
