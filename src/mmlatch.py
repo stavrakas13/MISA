@@ -249,6 +249,9 @@ class FeedbackUnit(nn.Module):
         mask = mask.transpose(1, 2)  # (B, D, Lmask)
         mask = F.interpolate(mask, size=x.size(1), mode="nearest")  # or "linear"
         mask = mask.transpose(1, 2)  # (B, Lx, D)
+        print(">>> x shape:", x.shape)
+        print(">>> mask shape:", mask.shape)
+        print(">>> lengths:", lengths)
 
         return x * mask
 
