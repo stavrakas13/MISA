@@ -239,8 +239,8 @@ class FeedbackUnit(nn.Module):
             )
             mask = mask.transpose(1, 2)               # πίσω στο (B, L, D)
 
-            x_new = x * mask
-            return x_new
+        x_new = x * mask
+        return x_new
 
 
 
