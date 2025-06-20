@@ -4,37 +4,57 @@ import torch.nn.functional as F
 from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 
 class PadPackedSequence(nn.Module):
-    """Some Information about PadPackedSequence"""
-
-    def __init__(self, batch_first=True):
-        super(PadPackedSequence, self).__init__()
+    """
+    Μετατρέπει ένα PackedSequence πίσω σε padded tensor
+    εξασφαλίζοντας ότι τα lengths είναι έγκυρα.
+    """
+    def __init__(self, batch_first: bool = True):
+        super().__init__()
         self.batch_first = batch_first
 
-    def forward(self, x, lengths):
-        # max_length = lengths.max().item()
-        # x, _ = pad_packed_sequence(
-        #     x, batch_first=self.batch_first, total_length=max_length
-        # )
+    def forward(self, packed, lengths):
+        # lengths: CPU int64, clamp ώστε να μην ξεφύγει κανένα
         lengths = lengths.detach().to("cpu").long()
-        max_length = lengths.max().item()
-        x, _ = pad_packed_sequence(
-            x, batch_first=self.batch_first, total_length=max_length
-        )
+        max_seq_len = packed.data.size(0)
+        lengths = lengths.clamp(min=1, max=max_seq_len)
 
-        return x
+        max_len = lengths.max().item()
+        padded, _ = pad_packed_sequence(
+            packed,
+            batch_first=self.batch_first,
+            total_length=max_len,
+        )
+        return padded
 
 
 class PackSequence(nn.Module):
-    def __init__(self, batch_first=True):
-        super(PackSequence, self).__init__()
+    """
+    Πακετάρει (pack) ένα padded tensor σε PackedSequence
+    με ασφάλειες για τύπο, συσκευή και εύρος των lengths.
+    """
+    def __init__(self, batch_first: bool = True):
+        super().__init__()
         self.batch_first = batch_first
 
     def forward(self, x, lengths):
-        x = pack_padded_sequence(
-            x, lengths, batch_first=self.batch_first, enforce_sorted=False
+        # 1) CPU int64
+        lengths = lengths.detach().to("cpu").long()
+
+        # 2) Clamp σε [1, real_len]
+        real_len = x.size(1) if self.batch_first else x.size(0)
+        lengths = lengths.clamp(min=1, max=real_len)
+
+        # 3) Pack (δεν χρειάζεται sort)
+        packed = pack_padded_sequence(
+            x,
+            lengths,
+            batch_first=self.batch_first,
+            enforce_sorted=False,
         )
-        lengths = lengths[x.sorted_indices]
-        return x, lengths
+
+        # 4) Επιβολή της ίδιας αναδιάταξης στα lengths
+        lengths = lengths[packed.sorted_indices]
+        return packed, lengths
 
 
 class RNN_latch(nn.Module):
