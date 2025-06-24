@@ -270,7 +270,7 @@ class MISA(nn.Module):
             seq_t = (bert_out * bert_mask.unsqueeze(2)).sum(1) / mask_len
             seq_t = seq_t.unsqueeze(1)
             h1_t, h2_t = None, seq_t.squeeze(1)
-            print(seq_t.shape, "Shape of seq text")
+            # print(seq_t.shape, "Shape of seq text")
         else:
             emb_t = self.embed(sentences)
             seq_t, h2_t = self.extract_features_seq(
@@ -280,12 +280,12 @@ class MISA(nn.Module):
         seq_v, h2_v = self.extract_features_seq(
             visual, len_v, self.vrnn1, self.vrnn2, self.vlayer_norm)
         h1_v = None
-        print(seq_v.shape, "Shape of seq visual")
+        # print(seq_v.shape, "Shape of seq visual")
 
         seq_a, h2_a = self.extract_features_seq(
             acoustic, len_a, self.arnn1, self.arnn2, self.alayer_norm)
         h1_a = None
-        print(seq_a.shape, "Shape of seq acoustic")
+        # print(seq_a.shape, "Shape of seq acoustic")
 
         # seq_t_out = bert_out
         # --- MMLatch feedback on sequences ---
