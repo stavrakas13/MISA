@@ -140,28 +140,6 @@ class MISA(nn.Module):
             dropout   = 0.1,
             device    = config.device,
         )
-
-        
-    
-    def extract_features_seq(self, x, lengths, rnn1, rnn2, layer_norm):
-        """
-        Return full sequence (B x L x H) and final hidden (B x H)
-        from two-layer BiRNN.
-        """
-        lengths = lengths.clamp(min=1, max=x.size(1))        # ← NEW
-        cpu_l = lengths.cpu().long()
-        packed1 = pack_padded_sequence(x, cpu_l, batch_first=True, enforce_sorted=False)
-
-        out1, _ = rnn1(packed1)
-        seq, _ = pad_packed_sequence(out1, batch_first=True)
-        seq = layer_norm(seq)
-        packed2 = pack_padded_sequence(seq, cpu_l, batch_first=True, enforce_sorted=False)
-        if self.config.rnncell == 'lstm':
-            _, (h2, _) = rnn2(packed2)
-        else:
-            _, h2 = rnn2(packed2)
-        return seq, h2.squeeze(0)
-
     
     def extract_features(self, sequence, lengths, rnn1, rnn2, layer_norm):
         # move lengths to CPU and ensure it's long\
@@ -202,7 +180,7 @@ class MISA(nn.Module):
         else:
             _, h2 = rnn2(packed2)
         return seq, h2.squeeze(0)
-
+    
     def alignment(self, sentences, visual, acoustic, lengths, len_t, len_v, len_a,
                   bert_sent, bert_type, bert_mask):
         
@@ -258,14 +236,15 @@ class MISA(nn.Module):
         seq_t_out = bert_out
         # --- MMLatch feedback on sequences ---
         seq_t, seq_a, seq_v = self.feedback(
-            low_x = raw_t,       # raw TEXT   (B, L, text_size)
-            low_y = acoustic,    # raw AUDIO  (B, L, acoustic_size)
-            low_z = visual,      # raw VISION (B, L, visual_size)
-            hi_x  = seq_t_out,       # contextualised text
-            hi_y  = seq_a,       # contextualised audio
-            hi_z  = seq_v,       # contextualised vision
-            lengths = lengths
+            low_x = raw_t,
+            low_y = acoustic,
+            low_z = visual,
+            hi_x  = seq_t_out,
+            hi_y  = seq_a,
+            hi_z  = seq_v,
+            lengths = lengths          # <- περνάς ΜΟΝΟ ένα
         )
+
 
         # Stage II: re-encode masked sequences
         if self.config.use_bert:

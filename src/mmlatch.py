@@ -150,22 +150,25 @@ class FeedbackUnit(nn.Module):
     out_dim : διαστάσεις του low-vector  (x)   – πρέπει να ταιριάζει!
     """
     def __init__(self,
-                 in_dim,
+                 hi_y_dim,
+                 hi_z_dim,
                  out_dim,
                  mask_type="learnable_sequence_mask",
                  dropout=0.1,
                  device="cpu"):
         super().__init__()
+        self.mask_type = mask_type
+        self.dropout   = dropout
 
         self.mask_type = mask_type    # <-- FIX: χρειάζεται για το dict lookup
 
         if mask_type == "learnable_sequence_mask":
-            self.mask1 = RNN_latch(in_dim, out_dim, dropout=dropout, device=device)
-            self.mask2 = RNN_latch(in_dim, out_dim, dropout=dropout, device=device)
+            self.mask_y = RNN_latch(hi_y_dim, out_dim, dropout=dropout, device=device)
+            self.mask_z = RNN_latch(hi_z_dim, out_dim, dropout=dropout, device=device)
         else:  # "learnable_static_mask"
-            self.mask1 = nn.Linear(in_dim, out_dim)
-            self.mask2 = nn.Linear(in_dim, out_dim)
-
+            self.mask_y = nn.Linear(hi_y_dim, out_dim)
+            self.mask_z = nn.Linear(hi_z_dim, out_dim)
+            
         self.dropout = dropout
         self.sigmoid = nn.Sigmoid()
 
@@ -177,37 +180,41 @@ class FeedbackUnit(nn.Module):
     # ------------------  internal helpers ------------------
 
     def _learnable_sequence_mask(self, y, z, lengths):
-        # y, z : (B, L, in_dim)
-        oy = self.mask1(y, lengths)         # (B, L, out_dim)
-        oz = self.mask2(z, lengths)         # (B, L, out_dim)
+        """
+        y, z : (B, L, in_dim)
+        lengths : (B,) LongTensor
+        """
+        oy, _, _ = self.mask_y(y, lengths)   # (B, L, out_dim)
+        oz, _, _ = self.mask_z(z, lengths)   # (B, L, out_dim)
         return 0.5 * (self.sigmoid(oy) + self.sigmoid(oz))
 
     def _learnable_static_mask(self, y, z, _):
-        # y, z : (B, L, in_dim)
-        oy = self.mask1(y)                  # (B, L, out_dim)
-        oz = self.mask2(z)                  # (B, L, out_dim)
+        """
+        static → δεν χρειάζονται lengths
+        """
+        oy = self.mask_y(y)                  # (B, L, out_dim)
+        oz = self.mask_z(z)                  # (B, L, out_dim)
         return 0.5 * (self.sigmoid(oy) + self.sigmoid(oz))
 
-    # ------------------  public forward --------------------
-
+    # --------------------------------------------------
     def forward(self, x, y, z, lengths):
         """
-        x : (B, L, out_dim)   → στο οποίο θα εφαρμοστεί η μάσκα
-        y : (B, L, in_dim)
-        z : (B, L, in_dim)
+        x : (B, L, out_dim)  — low-level sequence που θα φιλτραριστεί
+        y : (B, L, in_dim)   — hi-vector από 1η modality
+        z : (B, L, in_dim)   — hi-vector από 2η modality
         """
-        mask = self._mask_fn(y, z, lengths)     # (B, L, out_dim)
-        mask = F.dropout(mask, p=self.dropout, training=self.training)
-        return x * mask                         # element-wise
-
+        mask = F.dropout(
+            self._mask_fn(y, z, lengths), p=self.dropout, training=self.training
+        )                                     # (B, L, out_dim)
+        return x * mask
 
 # ============================================================
 #                 F E E D B A C K    B L O C K
 # ============================================================
 class Feedback(nn.Module):
     """
-    hi_dims  : tuple (d_t, d_a, d_v)  διαστάσεις των contextualised seq (y,z)
-    low_dims : tuple (r_t, r_a, r_v)  διαστάσεις των raw seq (x)
+    hi_dims  : (d_t, d_a, d_v)  ← πλάτη των contextualised seq   (seq_t, seq_a, seq_v)
+    low_dims : (r_t, r_a, r_v)  ← πλάτη των raw seq             (raw_t, acoustic, visual)
     """
     def __init__(self,
                  hi_dims,
@@ -217,21 +224,31 @@ class Feedback(nn.Module):
                  device="cpu"):
         super().__init__()
 
-        dt, da, dv = hi_dims
-        rt, ra, rv = low_dims
+        dt, da, dv = hi_dims     # 768, 148, 94        (π.χ.)
+        rt, ra, rv = low_dims    # 768,  74, 47        (π.χ.)
 
-        self.f_t = FeedbackUnit(dt, rt, mask_type, dropout, device)  # text mask
-        self.f_a = FeedbackUnit(da, ra, mask_type, dropout, device)  # audio mask
-        self.f_v = FeedbackUnit(dv, rv, mask_type, dropout, device)  # vision mask
+        # Για να φιλτράρω TEXT χρησιμοποιώ hi-AUDIO + hi-VISION → διαστάσεις da, dv
+        self.f_t = FeedbackUnit(hi_y_dim=da, hi_z_dim=dv, out_dim=rt,
+                                mask_type=mask_type, dropout=dropout, device=device)
 
-    def forward(self, low_x, low_y, low_z,   # raw   (x)
-                      hi_x,  hi_y,  hi_z,    # context (y,z)
-                      lengths):
+        # Για να φιλτράρω AUDIO χρησιμοποιώ hi-TEXT  + hi-VISION → διαστάσεις dt, dv
+        self.f_a = FeedbackUnit(hi_y_dim=dt, hi_z_dim=dv, out_dim=ra,
+                                mask_type=mask_type, dropout=dropout, device=device)
+
+        # Για να φιλτράρω VISION χρησιμοποιώ hi-TEXT  + hi-AUDIO  → διαστάσεις dt, da
+        self.f_v = FeedbackUnit(hi_y_dim=dt, hi_z_dim=da, out_dim=rv,
+                                mask_type=mask_type, dropout=dropout, device=device)
+
+    # ------------------------------------------------------------
+    def forward(self,
+                low_x, low_y, low_z,      # raw  seq  (x)
+                hi_x,  hi_y,  hi_z,       # high seq  (y,z)
+                lengths):
         """
-        Επιστρέφει sequences ίδιου σχήματος με low_x/low_y/low_z
-        μετά την εφαρμογή των μασκών.
+        Επιστρέφει τα low-seq αφού εφαρμοστούν οι αντίστοιχες μάσκες.
+        Όλες οι ακολουθίες υποθέτουμε ότι έχουν κοινά μήκη `lengths` (B,).
         """
-        x = self.f_t(low_x, hi_y, hi_z, lengths)  # κείμενο
-        y = self.f_a(low_y, hi_x, hi_z, lengths)  # ήχος
-        z = self.f_v(low_z, hi_x, hi_y, lengths)  # εικόνα
+        x = self.f_t(low_x, hi_y, hi_z, lengths)   # text  ← (audio, vision)
+        y = self.f_a(low_y, hi_x, hi_z, lengths)   # audio ← (text , vision)
+        z = self.f_v(low_z, hi_x, hi_y, lengths)   # vision← (text , audio)
         return x, y, z
