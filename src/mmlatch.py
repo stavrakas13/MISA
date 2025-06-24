@@ -155,7 +155,7 @@ class FeedbackUnit(nn.Module):
         self.hidden_dim = hidden_dim
 
         if mask_type == "learnable_sequence_mask":
-            print(hidden_dim.shape, "is hidden dim")
+            print(hidden_dim, "is hidden dim")
             self.mask1 = RNN_latch(hidden_dim, mod1_sz, dropout=dropout, device=device)
             self.mask2 = RNN_latch(hidden_dim, mod1_sz, dropout=dropout, device=device)
         else:
