@@ -212,6 +212,15 @@ class MISA(nn.Module):
             else:
                 # GloVe ή word2vec embeddings: (B, L, embedding_size)
                 raw_t = self.embed(sentences)   
+            
+            # raw_t: (B, 77, 768)
+            raw_t_nospecial = raw_t[:, 1:-1, :]          # (B, 75, 768)
+
+            # seq_t_out (contextualised) έχει επίσης 77 → κόψε το ίδιο
+            seq_t_ctx = bert_out[:, 1:-1, :]             # (B, 75, 768)
+            #κόβουμε ειδικούς χαρακτήσες του language model
+
+
             mask_len = bert_mask.sum(1, keepdim=True)
             seq_t = (bert_out * bert_mask.unsqueeze(2)).sum(1) / mask_len
             seq_t = seq_t.unsqueeze(1)
@@ -233,23 +242,27 @@ class MISA(nn.Module):
         h1_a = None
         print(seq_a.shape, "Shape of seq acoustic")
 
-        seq_t_out = bert_out
+        # seq_t_out = bert_out
         # --- MMLatch feedback on sequences ---
         seq_t, seq_a, seq_v = self.feedback(
-            low_x = raw_t,
-            low_y = acoustic,
-            low_z = visual,
-            hi_x  = seq_t_out,
-            hi_y  = seq_a,
-            hi_z  = seq_v,
-            lengths = lengths          # <- περνάς ΜΟΝΟ ένα
+            low_x = raw_t_nospecial,   # (B,75,768)
+            low_y = acoustic,          # (B,75,74)
+            low_z = visual,            # (B,75,35)
+            hi_x  = seq_t_ctx,         # (B,75,768)
+            hi_y  = seq_a,             # (B,75,148)
+            hi_z  = seq_v,             # (B,75,70)
+            lengths = len_t            # len_t == 75
         )
 
+
+        pad_cls = raw_t[:, :1, :]      # (B,1,768)
+        pad_sep = raw_t[:, -1:, :]
+        seq_t_full = torch.cat([pad_cls, seq_t, pad_sep], dim=1)   # (B,77,768)
 
         # Stage II: re-encode masked sequences
         if self.config.use_bert:
             bert_out2 = self.bertmodel(
-                inputs_embeds=seq_t,
+                inputs_embeds=seq_t_full,
                 attention_mask=bert_mask,
                 return_dict=True
             ).last_hidden_state
