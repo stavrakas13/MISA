@@ -276,16 +276,23 @@ class MISA(nn.Module):
                 seq_t, lengths, self.trnn1, self.trnn2, self.tlayer_norm)
             utt_t = self.project_t(torch.cat((f_h1_t, f_h2_t), dim=1))
 
+                # ----------------- VISUAL -----------------
         f_h1_v, f_h2_v = self.extract_features(
-            seq_v, lengths, self.vrnn1, self.vrnn2, self.vlayer_norm)
-        # utt_v = self.project_v(torch.cat((f_h1_v, f_h2_v), dim=1))
-        f_h1_a, f_h2_a = self.extract_features(
-            seq_a, lengths, self.arnn1, self.arnn2, self.alayer_norm)
-        utt_a = self.project_a(torch.cat((f_h1_a, f_h2_a), dim=1))
+                seq_v, len_v, self.vrnn1, self.vrnn2, self.vlayer_norm)
 
-        f_h1_v = f_h1_v.permute(1, 0, 2).contiguous().view(B, -1)  # (B, 70)
-        f_h2_v = f_h2_v.permute(1, 0, 2).contiguous().view(B, -1)  # (B, 70)
-        utt_v = self.project_v(torch.cat((f_h1_v, f_h2_v), dim=1))  # (B, 140) ✔
+        # reshape 2×35 -> 70
+        B = lengths.size(0)
+        f_h1_v = f_h1_v.permute(1,0,2).contiguous().view(B, -1)
+        f_h2_v = f_h2_v.permute(1,0,2).contiguous().view(B, -1)
+        utt_v  = self.project_v(torch.cat((f_h1_v, f_h2_v), dim=1))
+
+        # ----------------- ACOUSTIC  --------------  (χρησιμοποίησε len_a!)
+        f_h1_a, f_h2_a = self.extract_features(
+                seq_a, len_a, self.arnn1, self.arnn2, self.alayer_norm)
+
+        f_h1_a = f_h1_a.permute(1,0,2).contiguous().view(B, -1)
+        f_h2_a = f_h2_a.permute(1,0,2).contiguous().view(B, -1)
+        utt_a  = self.project_a(torch.cat((f_h1_a, f_h2_a), dim=1))
 
         # Continue with original MISA pipeline
         self.shared_private(utt_t, utt_v, utt_a)
