@@ -172,6 +172,8 @@ class FeedbackUnit(nn.Module):
         self.get_mask = mask_fn[self.mask_type]
 
     def _learnable_sequence_mask(self, y, z, lengths=None):
+        print(y.shape, "shape of x")
+        print(z.shape, "shape of z")
         oy, _, _ = self.mask1(y, lengths)
         oz, _, _ = self.mask2(z, lengths)
 
