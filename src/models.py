@@ -141,11 +141,35 @@ class MISA(nn.Module):
             device    = config.device,
         )
     
+    # def extract_features(self, sequence, lengths, rnn1, rnn2, layer_norm):
+    #     # move lengths to CPU and ensure it's long\
+    #     lengths = lengths.clamp(min=1, max=sequence.size(1)) # ← NEW
+    #     cpu_lengths = lengths.cpu().long()
+    #     packed_sequence = pack_padded_sequence(sequence, cpu_lengths, batch_first=True, enforce_sorted=False)
+
+    #     if self.config.rnncell == "lstm":
+    #         packed_h1, (final_h1, _) = rnn1(packed_sequence)
+    #     else:
+    #         packed_h1, final_h1 = rnn1(packed_sequence)
+
+    #     padded_h1, _ = pad_packed_sequence(packed_h1)
+    #     normed_h1 = layer_norm(padded_h1)
+    #     packed_normed_h1 = pack_padded_sequence(normed_h1, cpu_lengths, batch_first=True, enforce_sorted=False)
+
+
+    #     if self.config.rnncell == "lstm":
+    #         _, (final_h2, _) = rnn2(packed_normed_h1)
+    #     else:
+    #         _, final_h2 = rnn2(packed_normed_h1)
+
+    #     return final_h1, final_h2
     def extract_features(self, sequence, lengths, rnn1, rnn2, layer_norm):
-        # move lengths to CPU and ensure it's long\
-        lengths = lengths.clamp(min=1, max=sequence.size(1)) # ← NEW
-        cpu_lengths = lengths.cpu().long()
-        packed_sequence = pack_padded_sequence(sequence, cpu_lengths, batch_first=True, enforce_sorted=False)
+        # --- ΜΟΝΗ αλλαγή: clamp + cpu + long -----------------
+        lengths      = lengths.clamp(min=1, max=sequence.size(1))
+        cpu_lengths  = lengths.cpu().long()
+        # ------------------------------------------------------
+
+        packed_sequence = pack_padded_sequence(sequence, cpu_lengths)
 
         if self.config.rnncell == "lstm":
             packed_h1, (final_h1, _) = rnn1(packed_sequence)
@@ -154,8 +178,7 @@ class MISA(nn.Module):
 
         padded_h1, _ = pad_packed_sequence(packed_h1)
         normed_h1 = layer_norm(padded_h1)
-        packed_normed_h1 = pack_padded_sequence(normed_h1, cpu_lengths, batch_first=True, enforce_sorted=False)
-
+        packed_normed_h1 = pack_padded_sequence(normed_h1, cpu_lengths)
 
         if self.config.rnncell == "lstm":
             _, (final_h2, _) = rnn2(packed_normed_h1)
@@ -163,6 +186,7 @@ class MISA(nn.Module):
             _, final_h2 = rnn2(packed_normed_h1)
 
         return final_h1, final_h2
+
     
     def extract_features_seq(self, x, lengths, rnn1, rnn2, layer_norm):
         """
