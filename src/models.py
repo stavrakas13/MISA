@@ -261,9 +261,6 @@ class MISA(nn.Module):
 
         B = lengths.size(0)
 
-        f_h1_v = f_h1_v.permute(1, 0, 2).contiguous().view(B, -1)  # (B, 70)
-        f_h2_v = f_h2_v.permute(1, 0, 2).contiguous().view(B, -1)  # (B, 70)
-
         utt_v = self.project_v(torch.cat((f_h1_v, f_h2_v), dim=1))  # (B, 140) ✔
         # Stage II: re-encode masked sequences
         if self.config.use_bert:
@@ -287,6 +284,8 @@ class MISA(nn.Module):
             seq_a, lengths, self.arnn1, self.arnn2, self.alayer_norm)
         utt_a = self.project_a(torch.cat((f_h1_a, f_h2_a), dim=1))
 
+        f_h1_v = f_h1_v.permute(1, 0, 2).contiguous().view(B, -1)  # (B, 70)
+        f_h2_v = f_h2_v.permute(1, 0, 2).contiguous().view(B, -1)  # (B, 70)
         # Continue with original MISA pipeline
         self.shared_private(utt_t, utt_v, utt_a)
         if not self.config.use_cmd_sim:
