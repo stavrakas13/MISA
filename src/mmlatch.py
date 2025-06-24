@@ -141,78 +141,97 @@ class RNN_latch(nn.Module):
 
         return out, last_timestep, hidden
 
-
 class FeedbackUnit(nn.Module):
+    """
+    Δημιουργεί δύο μάσκες (από y & z), τις συνδυάζει και
+    τις εφαρμόζει στο x.
+
+    in_dim  : διαστάσεις των hi-vectors  (y, z)
+    out_dim : διαστάσεις του low-vector  (x)   – πρέπει να ταιριάζει!
+    """
     def __init__(self,
-                 in_dim,          # <-- ΝΕΟ: πόσες διαστάσεις έχει το hi-vector
-                 out_dim,         #      πόσες διαστάσεις έχει το low-vector (πάνω στο οποίο θα μπει η μάσκα)
+                 in_dim,
+                 out_dim,
                  mask_type="learnable_sequence_mask",
                  dropout=0.1,
                  device="cpu"):
         super().__init__()
 
+        self.mask_type = mask_type    # <-- FIX: χρειάζεται για το dict lookup
+
         if mask_type == "learnable_sequence_mask":
-            self.mask1 = RNN_latch(in_dim,  out_dim, dropout=dropout, device=device)
-            self.mask2 = RNN_latch(in_dim,  out_dim, dropout=dropout, device=device)
-        else:
+            self.mask1 = RNN_latch(in_dim, out_dim, dropout=dropout, device=device)
+            self.mask2 = RNN_latch(in_dim, out_dim, dropout=dropout, device=device)
+        else:  # "learnable_static_mask"
             self.mask1 = nn.Linear(in_dim, out_dim)
             self.mask2 = nn.Linear(in_dim, out_dim)
 
-        mask_fn = {
-            "learnable_static_mask": self._learnable_static_mask,
+        self.dropout = dropout
+        self.sigmoid = nn.Sigmoid()
+
+        self._mask_fn = {
+            "learnable_static_mask":   self._learnable_static_mask,
             "learnable_sequence_mask": self._learnable_sequence_mask,
-        }
+        }[mask_type]
 
-        self.get_mask = mask_fn[self.mask_type]
+    # ------------------  internal helpers ------------------
 
-    def _learnable_sequence_mask(self, y, z, lengths=None):
-        print(y.shape, "shape of x")
-        print(z.shape, "shape of z")
-        oy, _, _ = self.mask1(y, lengths)
-        oz, _, _ = self.mask2(z, lengths)
+    def _learnable_sequence_mask(self, y, z, lengths):
+        # y, z : (B, L, in_dim)
+        oy = self.mask1(y, lengths)         # (B, L, out_dim)
+        oz = self.mask2(z, lengths)         # (B, L, out_dim)
+        return 0.5 * (self.sigmoid(oy) + self.sigmoid(oz))
 
-        lg = (torch.sigmoid(oy) + torch.sigmoid(oz)) * 0.5
+    def _learnable_static_mask(self, y, z, _):
+        # y, z : (B, L, in_dim)
+        oy = self.mask1(y)                  # (B, L, out_dim)
+        oz = self.mask2(z)                  # (B, L, out_dim)
+        return 0.5 * (self.sigmoid(oy) + self.sigmoid(oz))
 
-        mask = lg
+    # ------------------  public forward --------------------
 
-        return mask
-
-    def _learnable_static_mask(self, y, z, lengths=None):
-        y = self.mask1(y)
-        z = self.mask2(z)
-        mask1 = torch.sigmoid(y)
-        mask2 = torch.sigmoid(z)
-        mask = (mask1 + mask2) * 0.5
-
-        return mask
-
-    def forward(self, x, y, z, lengths=None):
-        mask = self.get_mask(y, z, lengths=lengths)
-        mask = F.dropout(mask, p=0.2)
-        x_new = x * mask
-
-        return x_new
+    def forward(self, x, y, z, lengths):
+        """
+        x : (B, L, out_dim)   → στο οποίο θα εφαρμοστεί η μάσκα
+        y : (B, L, in_dim)
+        z : (B, L, in_dim)
+        """
+        mask = self._mask_fn(y, z, lengths)     # (B, L, out_dim)
+        mask = F.dropout(mask, p=self.dropout, training=self.training)
+        return x * mask                         # element-wise
 
 
+# ============================================================
+#                 F E E D B A C K    B L O C K
+# ============================================================
 class Feedback(nn.Module):
+    """
+    hi_dims  : tuple (d_t, d_a, d_v)  διαστάσεις των contextualised seq (y,z)
+    low_dims : tuple (r_t, r_a, r_v)  διαστάσεις των raw seq (x)
+    """
     def __init__(self,
-                 hi_dims,      # (d_t, d_a, d_v)
-                 low_dims,     # (raw_t, raw_a, raw_v)
+                 hi_dims,
+                 low_dims,
                  mask_type="learnable_sequence_mask",
                  dropout=0.1,
                  device="cpu"):
-
-        (dt, da, dv) = hi_dims
-        (rt, ra, rv) = low_dims
-
         super().__init__()
-        self.f1 = FeedbackUnit(dt, rt, mask_type, dropout, device)  # text
-        self.f2 = FeedbackUnit(da, ra, mask_type, dropout, device)  # audio
-        self.f3 = FeedbackUnit(dv, rv, mask_type, dropout, device)  # video
 
-    def forward(self, low_x, low_y, low_z, hi_x, hi_y, hi_z, lengths=None):
-        x = self.f1(low_x, hi_y, hi_z, lengths=lengths)
-        y = self.f2(low_y, hi_x, hi_z, lengths=lengths)
-        z = self.f3(low_z, hi_x, hi_y, lengths=lengths)
+        dt, da, dv = hi_dims
+        rt, ra, rv = low_dims
 
+        self.f_t = FeedbackUnit(dt, rt, mask_type, dropout, device)  # text mask
+        self.f_a = FeedbackUnit(da, ra, mask_type, dropout, device)  # audio mask
+        self.f_v = FeedbackUnit(dv, rv, mask_type, dropout, device)  # vision mask
+
+    def forward(self, low_x, low_y, low_z,   # raw   (x)
+                      hi_x,  hi_y,  hi_z,    # context (y,z)
+                      lengths):
+        """
+        Επιστρέφει sequences ίδιου σχήματος με low_x/low_y/low_z
+        μετά την εφαρμογή των μασκών.
+        """
+        x = self.f_t(low_x, hi_y, hi_z, lengths)  # κείμενο
+        y = self.f_a(low_y, hi_x, hi_z, lengths)  # ήχος
+        z = self.f_v(low_z, hi_x, hi_y, lengths)  # εικόνα
         return x, y, z
