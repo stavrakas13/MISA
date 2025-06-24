@@ -101,7 +101,7 @@ def get_config(parse=True, **optional_kwargs):
 
     parser.add_argument('--rnncell', type=str, default='lstm')
     parser.add_argument('--embedding_size', type=int, default=300)
-    parser.add_argument('--hidden_size', type=int, default=128)
+    parser.add_argument('--hidden_size', type=int, default=148)
     parser.add_argument('--dropout', type=float, default=0.5)
     parser.add_argument('--reverse_grad_weight', type=float, default=1.0)
     # Selectin activation from 'elu', "hardshrink", "hardtanh", "leakyrelu", "prelu", "relu", "rrelu", "tanh"
