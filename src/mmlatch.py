@@ -143,26 +143,20 @@ class RNN_latch(nn.Module):
 
 
 class FeedbackUnit(nn.Module):
-    def __init__(
-        self,
-        hidden_dim,
-        mod1_sz,
-        mask_type="learnable_sequence_mask",
-        dropout=0.1,
-        device="cpu",
-    ):
-        super(FeedbackUnit, self).__init__()
-        self.mask_type = mask_type
-        self.mod1_sz = mod1_sz
-        self.hidden_dim = hidden_dim
+    def __init__(self,
+                 in_dim,          # <-- ΝΕΟ: πόσες διαστάσεις έχει το hi-vector
+                 out_dim,         #      πόσες διαστάσεις έχει το low-vector (πάνω στο οποίο θα μπει η μάσκα)
+                 mask_type="learnable_sequence_mask",
+                 dropout=0.1,
+                 device="cpu"):
+        super().__init__()
 
         if mask_type == "learnable_sequence_mask":
-            print(hidden_dim, "is hidden dim")
-            self.mask1 = RNN_latch(hidden_dim, mod1_sz, dropout=dropout, device=device)
-            self.mask2 = RNN_latch(hidden_dim, mod1_sz, dropout=dropout, device=device)
+            self.mask1 = RNN_latch(in_dim,  out_dim, dropout=dropout, device=device)
+            self.mask2 = RNN_latch(in_dim,  out_dim, dropout=dropout, device=device)
         else:
-            self.mask1 = nn.Linear(hidden_dim, mod1_sz)
-            self.mask2 = nn.Linear(hidden_dim, mod1_sz)
+            self.mask1 = nn.Linear(in_dim, out_dim)
+            self.mask2 = nn.Linear(in_dim, out_dim)
 
         mask_fn = {
             "learnable_static_mask": self._learnable_static_mask,
@@ -201,38 +195,20 @@ class FeedbackUnit(nn.Module):
 
 
 class Feedback(nn.Module):
-    def __init__(
-        self,
-        hidden_dim,
-        mod1_sz,
-        mod2_sz,
-        mod3_sz,
-        mask_type="learnable_sequence_mask",
-        dropout=0.1,
-        device="cpu",
-    ):
-        super(Feedback, self).__init__()
-        self.f1 = FeedbackUnit(
-            hidden_dim,
-            mod1_sz,
-            mask_type=mask_type,
-            dropout=dropout,
-            device=device,
-        )
-        self.f2 = FeedbackUnit(
-            hidden_dim,
-            mod2_sz,
-            mask_type=mask_type,
-            dropout=dropout,
-            device=device,
-        )
-        self.f3 = FeedbackUnit(
-            hidden_dim,
-            mod3_sz,
-            mask_type=mask_type,
-            dropout=dropout,
-            device=device,
-        )
+    def __init__(self,
+                 hi_dims,      # (d_t, d_a, d_v)
+                 low_dims,     # (raw_t, raw_a, raw_v)
+                 mask_type="learnable_sequence_mask",
+                 dropout=0.1,
+                 device="cpu"):
+
+        (dt, da, dv) = hi_dims
+        (rt, ra, rv) = low_dims
+
+        super().__init__()
+        self.f1 = FeedbackUnit(dt, rt, mask_type, dropout, device)  # text
+        self.f2 = FeedbackUnit(da, ra, mask_type, dropout, device)  # audio
+        self.f3 = FeedbackUnit(dv, rv, mask_type, dropout, device)  # video
 
     def forward(self, low_x, low_y, low_z, hi_x, hi_y, hi_z, lengths=None):
         x = self.f1(low_x, hi_y, hi_z, lengths=lengths)

@@ -249,15 +249,17 @@ class MISA(nn.Module):
         print(seq_a.shape, "Shape of seq acoustic")
 
         # --- MMLatch feedback on sequences ---
-        seq_t, seq_a, seq_v = self.feedback(
-            low_x = raw_t,       # raw TEXT   (B, L, text_size)
-            low_y = acoustic,    # raw AUDIO  (B, L, acoustic_size)
-            low_z = visual,      # raw VISION (B, L, visual_size)
-            hi_x  = seq_t,       # contextualised text
-            hi_y  = seq_a,       # contextualised audio
-            hi_z  = seq_v,       # contextualised vision
-            lengths = lengths
+        seq_t_out = bert_out            # (B, L, 768)
+        seq_t, seq_a, seq_v == self.feedback(
+            low_x = raw_t,         # (B, L, 768)
+            low_y = acoustic,      # (B, L, 74)
+            low_z = visual,        # (B, L, 47)
+            hi_x  = seq_t_out,     # (B, L, 768)
+            hi_y  = seq_a,         # (B, L, 148)
+            hi_z  = seq_v,         # (B, L, 94)
+            lengths = lengths,
         )
+
 
         # Stage II: re-encode masked sequences
         if self.config.use_bert:
