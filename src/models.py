@@ -125,15 +125,22 @@ class MISA(nn.Module):
         self.alayer_norm = nn.LayerNorm(self.hidden_sizes[2]*2)
 
         # --- NEW: MMLatch feedback block ---
+        hi_dims  = (self.text_size,          # π.χ. 768
+            self.acoustic_size*2,    # π.χ. 74*2 = 148
+            self.visual_size*2)      # π.χ. 47*2 = 94
+
+        low_dims = (self.text_size,          # 768
+                    self.acoustic_size,      # 74
+                    self.visual_size)        # 47
+
         self.feedback = Feedback(
-            hidden_dim=config.hidden_size,
-            mod1_sz=self.text_size,
-            mod2_sz=self.acoustic_size,
-            mod3_sz=self.visual_size,
-            mask_type='learnable_sequence_mask',
-            dropout=0.1,
-            device=config.device
+            hi_dims  = hi_dims,
+            low_dims = low_dims,
+            mask_type = "learnable_sequence_mask",
+            dropout   = 0.1,
+            device    = config.device,
         )
+
         
     
     def extract_features_seq(self, x, lengths, rnn1, rnn2, layer_norm):
@@ -248,18 +255,17 @@ class MISA(nn.Module):
         h1_a = None
         print(seq_a.shape, "Shape of seq acoustic")
 
+        seq_t_out = bert_out
         # --- MMLatch feedback on sequences ---
-        seq_t_out = bert_out            # (B, L, 768)
-        seq_t, seq_a, seq_v == self.feedback(
-            low_x = raw_t,         # (B, L, 768)
-            low_y = acoustic,      # (B, L, 74)
-            low_z = visual,        # (B, L, 47)
-            hi_x  = seq_t_out,     # (B, L, 768)
-            hi_y  = seq_a,         # (B, L, 148)
-            hi_z  = seq_v,         # (B, L, 94)
-            lengths = lengths,
+        seq_t, seq_a, seq_v = self.feedback(
+            low_x = raw_t,       # raw TEXT   (B, L, text_size)
+            low_y = acoustic,    # raw AUDIO  (B, L, acoustic_size)
+            low_z = visual,      # raw VISION (B, L, visual_size)
+            hi_x  = seq_t_out,       # contextualised text
+            hi_y  = seq_a,       # contextualised audio
+            hi_z  = seq_v,       # contextualised vision
+            lengths = lengths
         )
-
 
         # Stage II: re-encode masked sequences
         if self.config.use_bert:
