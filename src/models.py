@@ -155,6 +155,7 @@ class MISA(nn.Module):
             _, h2 = rnn2(packed2)
         return seq, h2.squeeze(0)
 
+    
     def extract_features(self, sequence, lengths, rnn1, rnn2, layer_norm):
         # move lengths to CPU and ensure it's long\
         lengths = lengths.clamp(min=1, max=sequence.size(1)) # ← NEW
@@ -177,10 +178,39 @@ class MISA(nn.Module):
             _, final_h2 = rnn2(packed_normed_h1)
 
         return final_h1, final_h2
+    
+    def extract_features_seq(self, x, lengths, rnn1, rnn2, layer_norm):
+        """
+        Return full sequence (B x L x H) and final hidden (B x H)
+        from two-layer BiRNN.
+        """
+        cpu_l = lengths.cpu().long()
+        packed1 = pack_padded_sequence(x, cpu_l, batch_first=True, enforce_sorted=False)
+        out1, _ = rnn1(packed1)
+        seq, _ = pad_packed_sequence(out1, batch_first=True)
+        seq = layer_norm(seq)
+        packed2 = pack_padded_sequence(seq, cpu_l, batch_first=True, enforce_sorted=False)
+        if self.config.rnncell == 'lstm':
+            _, (h2, _) = rnn2(packed2)
+        else:
+            _, h2 = rnn2(packed2)
+        return seq, h2.squeeze(0)
 
     def alignment(self, sentences, visual, acoustic, lengths, len_t, len_v, len_a,
                   bert_sent, bert_type, bert_mask):
+        
         # Stage I: extract full sequences + states
+        print("sentences shape:", sentences.shape)
+        print("visual shape:", visual.shape)
+        print("acoustic shape:", acoustic.shape)
+        print("lengths shape:", lengths.shape)
+        print("len_t shape:", len_t.shape)
+        print("len_v shape:", len_v.shape)
+        print("len_a shape:", len_a.shape)
+        print("bert_sent shape:", bert_sent.shape)
+        print("bert_type shape:", bert_type.shape)
+        print("bert_mask shape:", bert_mask.shape)
+
         if self.config.use_bert:
             bert_out = self.bertmodel(
                 input_ids=bert_sent,
@@ -201,6 +231,7 @@ class MISA(nn.Module):
             seq_t = (bert_out * bert_mask.unsqueeze(2)).sum(1) / mask_len
             seq_t = seq_t.unsqueeze(1)
             h1_t, h2_t = None, seq_t.squeeze(1)
+            print(seq_t.shape, "Shape of seq text")
         else:
             emb_t = self.embed(sentences)
             seq_t, h2_t = self.extract_features_seq(
@@ -210,9 +241,12 @@ class MISA(nn.Module):
         seq_v, h2_v = self.extract_features_seq(
             visual, len_v, self.vrnn1, self.vrnn2, self.vlayer_norm)
         h1_v = None
+        print(seq_v.shape, "Shape of seq visual")
+
         seq_a, h2_a = self.extract_features_seq(
             acoustic, len_a, self.arnn1, self.arnn2, self.alayer_norm)
         h1_a = None
+        print(seq_a.shape, "Shape of seq acoustic")
 
         # --- MMLatch feedback on sequences ---
         seq_t, seq_a, seq_v = self.feedback(
