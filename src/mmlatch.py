@@ -45,18 +45,18 @@ class RNN_latch(nn.Module):
         packed_sequence=True,
         device="cpu",
     ):
-        hidden_size=128 #changed...
+        hidden_size=148 #changed...
         super(RNN_latch, self).__init__()
         self.device = device
         self.bidirectional = bidirectional
-        self.hidden_size = 128
+        self.hidden_size = 148
         # self.hidden_size = hidden_size
         self.batch_first = batch_first
         self.merge_bi = merge_bi
         self.rnn_type = rnn_type.lower()
 
         # self.out_size = hidden_size
-        self.out_size = 128
+        self.out_size = 148
 
         if bidirectional and merge_bi == "cat":
             self.out_size = 2 * hidden_size
