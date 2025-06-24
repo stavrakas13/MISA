@@ -163,58 +163,69 @@ class MISA(nn.Module):
     #         _, final_h2 = rnn2(packed_normed_h1)
 
     #     return final_h1, final_h2
+    # =========================================================
+# 1)  extract_features   (επιστρέφει ΤΕΛΙΚΑ hidden states)
+# =========================================================
     def extract_features(self, sequence, lengths, rnn1, rnn2, layer_norm):
-        # --- ΜΟΝΗ αλλαγή: clamp + cpu + long -----------------
-        lengths      = lengths.clamp(min=1, max=sequence.size(1))
-        cpu_lengths  = lengths.cpu().long()
-        # ------------------------------------------------------
+        # --- ασφαλές lengths -------------------------------------------------
+        lengths     = lengths.clamp(min=1, max=sequence.size(1))
+        cpu_lengths = lengths.cpu().long()
+        # ---------------------------------------------------------------------
 
-        packed_sequence = pack_padded_sequence(sequence, cpu_lengths)
-
+        # 1ο BiRNN -------------------------------------------------------------
+        packed1 = pack_padded_sequence(sequence, cpu_lengths,
+                                    batch_first=True, enforce_sorted=False)
         if self.config.rnncell == "lstm":
-            packed_h1, (final_h1, _) = rnn1(packed_sequence)
+            packed_h1, (final_h1, _) = rnn1(packed1)     # final_h1: (dirs, B, H)
         else:
-            packed_h1, final_h1 = rnn1(packed_sequence)
+            packed_h1, final_h1 = rnn1(packed1)
 
-        padded_h1, _ = pad_packed_sequence(packed_h1)
-        normed_h1 = layer_norm(padded_h1)
-        packed_normed_h1 = pack_padded_sequence(normed_h1, cpu_lengths)
+        # layer-norm στο sequence ---------------------------------------------
+        padded_h1, _ = pad_packed_sequence(packed_h1, batch_first=True)  # (B,L,H)
+        normed_h1    = layer_norm(padded_h1)
 
+        # 2ο BiRNN -------------------------------------------------------------
+        packed2 = pack_padded_sequence(normed_h1, cpu_lengths,
+                                    batch_first=True, enforce_sorted=False)
         if self.config.rnncell == "lstm":
-            _, (final_h2, _) = rnn2(packed_normed_h1)
+            _, (final_h2, _) = rnn2(packed2)
         else:
-            _, final_h2 = rnn2(packed_normed_h1)
+            _, final_h2 = rnn2(packed2)
 
-        return final_h1, final_h2
+        return final_h1, final_h2                          # (dirs,B,H) , (dirs,B,H)
 
-    
+
+    # =========================================================
+    # 2)  extract_features_seq   (επιστρέφει ΟΛΟ το seq + hidden)
+    # =========================================================
     def extract_features_seq(self, x, lengths, rnn1, rnn2, layer_norm):
         """
-        Return full sequence (B, L, H)  and  final hidden (B, H)
-        from two-layer BiRNN.
+        Επιστρέφει:
+            seq  : (B, L, H)  – ολόκληρη η κανονικοποιημένη ακολουθία
+            h2   : (B, H)     – τελικό hidden (με squeeze των dirs & layers)
         """
-        # 1) Clamp – εγγυάται 1 ≤ len ≤ L
-        lengths = lengths.clamp(min=1, max=x.size(1))
+        lengths     = lengths.clamp(min=1, max=x.size(1))
+        cpu_l       = lengths.cpu().long()
 
-        # 2) Σε CPU & long
-        cpu_l = lengths.to("cpu", dtype=torch.long)
-
-        # ---------- 1ο Bi-RNN ---------------------------------
+        # 1ο BiRNN -------------------------------------------------------------
         packed1 = pack_padded_sequence(x, cpu_l,
                                     batch_first=True, enforce_sorted=False)
         out1, _ = rnn1(packed1)
-        seq, _  = pad_packed_sequence(out1, batch_first=True)
+        seq, _  = pad_packed_sequence(out1, batch_first=True)   # (B,L,H)
         seq     = layer_norm(seq)
 
-        # ---------- 2ο Bi-RNN ---------------------------------
+        # 2ο BiRNN -------------------------------------------------------------
         packed2 = pack_padded_sequence(seq, cpu_l,
                                     batch_first=True, enforce_sorted=False)
         if self.config.rnncell == "lstm":
-            _, (h2, _) = rnn2(packed2)          # h2: (dirs, B, H)
+            _, (h2, _) = rnn2(packed2)   # h2: (dirs, B, H)
         else:
             _, h2 = rnn2(packed2)
 
-        return seq, h2.squeeze(0)               # (B, L, H), (B, H)
+        return seq, h2.squeeze(0)         # (B,L,H) , (B,H)
+
+    
+    
     def alignment(self, sentences, visual, acoustic, lengths, len_t, len_v, len_a,
                   bert_sent, bert_type, bert_mask):
         
