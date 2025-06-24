@@ -49,7 +49,7 @@ class RNN_latch(nn.Module):
         super(RNN_latch, self).__init__()
         self.device = device
         self.bidirectional = bidirectional
-        self.hidden_size = 148
+        self.hidden_size = 128
         
         # self.hidden_size = hidden_size
         self.batch_first = batch_first
