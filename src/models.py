@@ -166,23 +166,31 @@ class MISA(nn.Module):
     
     def extract_features_seq(self, x, lengths, rnn1, rnn2, layer_norm):
         """
-        Return full sequence (B x L x H) and final hidden (B x H)
+        Return full sequence (B, L, H)  and  final hidden (B, H)
         from two-layer BiRNN.
         """
-        cpu_l = lengths.clamp(min=1, max=x.size(1)) # ← NEW
+        # 1) Clamp – εγγυάται 1 ≤ len ≤ L
+        lengths = lengths.clamp(min=1, max=x.size(1))
 
-        # cpu_l = lengths.cpu().long()
-        packed1 = pack_padded_sequence(x, cpu_l, batch_first=True, enforce_sorted=False)
+        # 2) Σε CPU & long
+        cpu_l = lengths.to("cpu", dtype=torch.long)
+
+        # ---------- 1ο Bi-RNN ---------------------------------
+        packed1 = pack_padded_sequence(x, cpu_l,
+                                    batch_first=True, enforce_sorted=False)
         out1, _ = rnn1(packed1)
-        seq, _ = pad_packed_sequence(out1, batch_first=True)
-        seq = layer_norm(seq)
-        packed2 = pack_padded_sequence(seq, cpu_l, batch_first=True, enforce_sorted=False)
-        if self.config.rnncell == 'lstm':
-            _, (h2, _) = rnn2(packed2)
+        seq, _  = pad_packed_sequence(out1, batch_first=True)
+        seq     = layer_norm(seq)
+
+        # ---------- 2ο Bi-RNN ---------------------------------
+        packed2 = pack_padded_sequence(seq, cpu_l,
+                                    batch_first=True, enforce_sorted=False)
+        if self.config.rnncell == "lstm":
+            _, (h2, _) = rnn2(packed2)          # h2: (dirs, B, H)
         else:
             _, h2 = rnn2(packed2)
-        return seq, h2.squeeze(0)
-    
+
+        return seq, h2.squeeze(0)               # (B, L, H), (B, H)
     def alignment(self, sentences, visual, acoustic, lengths, len_t, len_v, len_a,
                   bert_sent, bert_type, bert_mask):
         
