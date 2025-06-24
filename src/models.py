@@ -230,16 +230,16 @@ class MISA(nn.Module):
                   bert_sent, bert_type, bert_mask):
         
         # Stage I: extract full sequences + states
-        print("sentences shape:", sentences.shape)
-        print("visual shape:", visual.shape)
-        print("acoustic shape:", acoustic.shape)
-        print("lengths shape:", lengths.shape)
-        print("len_t shape:", len_t.shape)
-        print("len_v shape:", len_v.shape)
-        print("len_a shape:", len_a.shape)
-        print("bert_sent shape:", bert_sent.shape)
-        print("bert_type shape:", bert_type.shape)
-        print("bert_mask shape:", bert_mask.shape)
+        # print("sentences shape:", sentences.shape)
+        # print("visual shape:", visual.shape)
+        # print("acoustic shape:", acoustic.shape)
+        # print("lengths shape:", lengths.shape)
+        # print("len_t shape:", len_t.shape)
+        # print("len_v shape:", len_v.shape)
+        # print("len_a shape:", len_a.shape)
+        # print("bert_sent shape:", bert_sent.shape)
+        # print("bert_type shape:", bert_type.shape)
+        # print("bert_mask shape:", bert_mask.shape)
 
         if self.config.use_bert:
             bert_out = self.bertmodel(
