@@ -143,19 +143,19 @@ class MISA(nn.Module):
         self.mlp_t = nn.Sequential(
             nn.Linear(self.text_size, self.text_size),
             nn.GELU(),
-            nn.LayerNorm(self.config.hidden_size)
+            nn.LayerNorm(self.text_size)
         )
 
         self.mlp_a = nn.Sequential(
             nn.Linear(self.acoustic_size*2, self.acoustic_size*2),   # 148→H
             nn.GELU(),
-            nn.LayerNorm(self.config.hidden_size)
+            nn.LayerNorm(self.acoustic_size*2)
         )
 
         self.mlp_v = nn.Sequential(
             nn.Linear(self.visual_size*2, self.visual_size*2),     # 94→H
             nn.GELU(),
-            nn.LayerNorm(self.config.hidden_size)
+            nn.LayerNorm(self.visual_size*2)
         )
     
     # def extract_features(self, sequence, lengths, rnn1, rnn2, layer_norm):
