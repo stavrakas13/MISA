@@ -270,16 +270,6 @@ class MISA(nn.Module):
             hi_z  = hi_z_seq,   # (B,L,94)   projected vision  (✔︎ dv)
             lengths = len_t
         )
-        # --- MMLatch feedback now uses projected hi inputs ---
-        seq_t, seq_a, seq_v = self.feedback(
-            low_x=raw_t,
-            low_y=acoustic,
-            low_z=visual,
-            hi_x=hi_x_seq,  # Projected & expanded
-            hi_y=hi_y_seq,  # Projected & expanded
-            hi_z=hi_z_seq,  # Projected & expanded
-            lengths=len_t
-        )
 
         B = lengths.size(0)
 
