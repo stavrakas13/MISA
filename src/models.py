@@ -141,19 +141,19 @@ class MISA(nn.Module):
             device    = config.device,
         )
         self.mlp_t = nn.Sequential(
-            nn.Linear(self.text_size, self.config.hidden_size),
+            nn.Linear(self.text_size, self.text_size),
             nn.GELU(),
             nn.LayerNorm(self.config.hidden_size)
         )
 
         self.mlp_a = nn.Sequential(
-            nn.Linear(self.acoustic_size*2, self.config.hidden_size),   # 148→H
+            nn.Linear(self.acoustic_size*2, self.acoustic_size*2),   # 148→H
             nn.GELU(),
             nn.LayerNorm(self.config.hidden_size)
         )
 
         self.mlp_v = nn.Sequential(
-            nn.Linear(self.visual_size*2, self.config.hidden_size),     # 94→H
+            nn.Linear(self.visual_size*2, self.visual_size*2),     # 94→H
             nn.GELU(),
             nn.LayerNorm(self.config.hidden_size)
         )
