@@ -234,27 +234,42 @@ class MISA(nn.Module):
             raw_t_mean     = emb_t.mean(1)                  # (B, D)
             utterance_text = seq_t.mean(1)                  # (B, 768)
             
-        final_h1v, final_h2v = self.extract_features(visual, lengths, self.vrnn1, self.vrnn2, self.vlayer_norm)
-        utterance_video = final_h2v.permute(1,0,2).contiguous().view(batch_size, -1)  # (B, 94)
+        # --------- VISUAL (B,140) ---------------                    #
+        final_h1v, final_h2v = self.extract_features(
+            visual, lengths, self.vrnn1, self.vrnn2, self.vlayer_norm)
+        h1v = final_h1v.permute(1,0,2).contiguous().view(batch_size, -1)   # (B,70)
+        h2v = final_h2v.permute(1,0,2).contiguous().view(batch_size, -1)   # (B,70)
+        utterance_video = torch.cat([h1v, h2v], dim=1)                     # (B,140)
+        utterance_video_proj = self.project_v(utterance_video)             # (B,94)
 
-        # print(seq_v.shape, "Shape of seq visual")
+        # --------- AUDIO  (B,296) ---------------                      #
+        final_h1a, final_h2a = self.extract_features(
+            acoustic, lengths, self.arnn1, self.arnn2, self.alayer_norm)
+        h1a = final_h1a.permute(1,0,2).contiguous().view(batch_size, -1)   # (B,148)
+        h2a = final_h2a.permute(1,0,2).contiguous().view(batch_size, -1)   # (B,148)
+        utterance_audio = torch.cat([h1a, h2a], dim=1)                     # (B,296)
+        utterance_audio_proj = self.project_a(utterance_audio)             # (B,148)
 
-        final_h1a, final_h2a = self.extract_features(acoustic, lengths, self.arnn1, self.arnn2, self.alayer_norm)
-        utterance_audio = final_h2a.permute(1,0,2).contiguous().view(batch_size, -1)  # (B, 148)
+        # --------- TEXT (όπως πριν) --------------                     #
+        utterance_text_proj = self.project_t(utterance_text)               # (B,768)
 
-        # print(seq_a.shape, "Shape of seq acoustic")
+        # --------------------------------------------------------------#
+        L = raw_t.size(1)                                                  # μήκος seq
 
-        utterance_text_proj = self.project_t(utterance_text)  # (B, D_proj)
-        utterance_video_proj = self.project_v(utterance_video)  # (B, D_proj)
-        utterance_audio_proj = self.project_a(utterance_audio)  # (B, D_proj)
+        hi_x_seq = utterance_text_proj.unsqueeze(1).expand(-1, L, -1)  # (B,L,768)
+        hi_y_seq = utterance_audio_proj.unsqueeze(1).expand(-1, L, -1) # (B,L,148)  <-- AUDIO
+        hi_z_seq = utterance_video_proj.unsqueeze(1).expand(-1, L, -1) # (B,L,94)   <-- VISION
 
-        L = raw_t.size(1)  # Sequence length
-
-        # Expand PROJECTED utterance-level representations
-        hi_x_seq = utterance_text_proj.unsqueeze(1).expand(-1, L, -1)  # (B, L, D_proj)
-        hi_y_seq = utterance_video_proj.unsqueeze(1).expand(-1, L, -1)  # (B, L, D_proj)
-        hi_z_seq = utterance_audio_proj.unsqueeze(1).expand(-1, L, -1)  # (B, L, D_proj)
-
+        # ----------  Feedback με τις σωστές διαστάσεις / σειρά --------#
+        seq_t, seq_a, seq_v = self.feedback(
+            low_x = raw_t,      # (B,L,768)  text tokens
+            low_y = acoustic,   # (B,L,74)   raw audio
+            low_z = visual,     # (B,L,47)   raw vision
+            hi_x  = hi_x_seq,   # (B,L,768)  projected text
+            hi_y  = hi_y_seq,   # (B,L,148)  projected audio   (✔︎ da)
+            hi_z  = hi_z_seq,   # (B,L,94)   projected vision  (✔︎ dv)
+            lengths = len_t
+        )
         # --- MMLatch feedback now uses projected hi inputs ---
         seq_t, seq_a, seq_v = self.feedback(
             low_x=raw_t,
