@@ -290,6 +290,7 @@ class MISA(nn.Module):
         hi_v  = self.mlp_v(seq_v)                     # (B,75,H)
         low_v = visual                               # (B,75,35)
 
+
         # ---------- ACOUSTIC ------------------------------------------------
         seq_a, _ = self.extract_features_seq(
             acoustic, len_a, self.arnn1, self.arnn2, self.alayer_norm)
