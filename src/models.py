@@ -275,10 +275,15 @@ class MISA(nn.Module):
 
         B = lengths.size(0)
 
+        pad_cls = raw_t[:, :1, :]        # (B,1,768)  —  [CLS]
+        pad_sep = raw_t[:, -1:, :]       # (B,1,768)  —  [SEP]
+
+        seq_t_full = torch.cat([pad_cls, seq_t, pad_sep], dim=1)  # (B, 76, 768)
+        
         # Stage II: re-encode masked sequences
         if self.config.use_bert:
             bert_out2 = self.bertmodel(
-                inputs_embeds=seq_t,
+                inputs_embeds=seq_t_full,
                 attention_mask=bert_mask,
                 return_dict=True
             ).last_hidden_state
