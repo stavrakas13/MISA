@@ -244,15 +244,21 @@ class MISA(nn.Module):
 
         # print(seq_a.shape, "Shape of seq acoustic")
 
+        L = raw_t.size(1) 
+        
+        hi_x_seq = utterance_text.unsqueeze(1).expand(-1, L, -1)   # (B, L, 768)
+        hi_y_seq = utterance_audio.unsqueeze(1).expand(-1, L, -1)  # (B, L, 148)
+        hi_z_seq = utterance_video.unsqueeze(1).expand(-1, L, -1)  # (B, L, 94)
+
         # seq_t_out = bert_out
         # --- MMLatch feedback on sequences ---
         seq_t, seq_a, seq_v = self.feedback(
             low_x = raw_t,   # (B,75,768)
             low_y = acoustic,          # (B,75,74)
             low_z = visual,            # (B,75,35)
-            hi_x  = utterance_text,         # (B,75,768)
-            hi_y  = utterance_audio,             # (B,75,148)
-            hi_z  = utterance_video,             # (B,75,70)
+            hi_x  = hi_x_seq,         # (B,75,768)
+            hi_y  = hi_y_seq,             # (B,75,148)
+            hi_z  = hi_z_seq,             # (B,75,70)
             lengths = len_t            # len_t == 75
         )
 
