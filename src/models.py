@@ -281,5 +281,6 @@ class MISA(nn.Module):
 
     def forward(self, sentences, video, acoustic, lengths, bert_sent, bert_sent_type, bert_sent_mask):
         batch_size = lengths.size(0)
+        
         o = self.alignment(sentences, video, acoustic, lengths, bert_sent, bert_sent_type, bert_sent_mask)
         return o
