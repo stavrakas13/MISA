@@ -271,7 +271,7 @@ class MISA(nn.Module):
         # Stage II: re-encode masked sequences
         if self.config.use_bert:
             bert_out2 = self.bertmodel(
-                inputs_embeds=seq_t_full,
+                inputs_embeds=seq_t,
                 attention_mask=bert_mask,
                 return_dict=True
             ).last_hidden_state
