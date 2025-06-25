@@ -244,28 +244,27 @@ class MISA(nn.Module):
 
         # print(seq_a.shape, "Shape of seq acoustic")
 
-        L = raw_t.size(1) 
-        
-        hi_x_seq = utterance_text.unsqueeze(1).expand(-1, L, -1)   # (B, L, 768)
-        hi_y_seq = utterance_audio.unsqueeze(1).expand(-1, L, -1)  # (B, L, 148)
-        hi_z_seq = utterance_video.unsqueeze(1).expand(-1, L, -1)  # (B, L, 94)
+        utterance_text_proj = self.project_t(utterance_text)  # (B, D_proj)
+        utterance_video_proj = self.project_v(utterance_video)  # (B, D_proj)
+        utterance_audio_proj = self.project_a(utterance_audio)  # (B, D_proj)
 
-        # seq_t_out = bert_out
-        # --- MMLatch feedback on sequences ---
+        L = raw_t.size(1)  # Sequence length
+
+        # Expand PROJECTED utterance-level representations
+        hi_x_seq = utterance_text_proj.unsqueeze(1).expand(-1, L, -1)  # (B, L, D_proj)
+        hi_y_seq = utterance_video_proj.unsqueeze(1).expand(-1, L, -1)  # (B, L, D_proj)
+        hi_z_seq = utterance_audio_proj.unsqueeze(1).expand(-1, L, -1)  # (B, L, D_proj)
+
+        # --- MMLatch feedback now uses projected hi inputs ---
         seq_t, seq_a, seq_v = self.feedback(
-            low_x = raw_t,   # (B,75,768)
-            low_y = acoustic,          # (B,75,74)
-            low_z = visual,            # (B,75,35)
-            hi_x  = hi_x_seq,         # (B,75,768)
-            hi_y  = hi_y_seq,             # (B,75,148)
-            hi_z  = hi_z_seq,             # (B,75,70)
-            lengths = len_t            # len_t == 75
+            low_x=raw_t,
+            low_y=acoustic,
+            low_z=visual,
+            hi_x=hi_x_seq,  # Projected & expanded
+            hi_y=hi_y_seq,  # Projected & expanded
+            hi_z=hi_z_seq,  # Projected & expanded
+            lengths=len_t
         )
-
-
-        pad_cls = raw_t[:, :1, :]      # (B,1,768)
-        pad_sep = raw_t[:, -1:, :]
-        seq_t_full = torch.cat([pad_cls, seq_t, pad_sep], dim=1)   # (B,77,768)
 
         B = lengths.size(0)
 
