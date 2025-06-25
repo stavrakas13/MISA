@@ -129,13 +129,11 @@ class MISA(nn.Module):
         self.alayer_norm = nn.LayerNorm(self.hidden_sizes[2]*2)
 
         # --- NEW: MMLatch feedback block ---
-        hi_dims  = (self.text_size,          # π.χ. 768
-            self.acoustic_size*2,    # π.χ. 74*2 = 148
-            self.visual_size*2)      # π.χ. 47*2 = 94
+        hi_dims  = (proj_dim, proj_dim, proj_dim)   # (128, 128, 128)
+        low_dims = (self.text_size,
+                    self.acoustic_size,
+                    self.visual_size)
 
-        low_dims = (self.text_size,          # 768
-                    self.acoustic_size,      # 74
-                    self.visual_size)        # 47
 
         self.feedback = Feedback(
             hi_dims  = hi_dims,
