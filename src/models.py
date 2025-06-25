@@ -136,7 +136,7 @@ class MISA(nn.Module):
         self.feedback = Feedback(
             hi_dims  = hi_dims,
             low_dims = low_dims,
-            mask_type = "learnable_sequence_mask",
+            mask_type = "learnable_static_mask",
             dropout   = 0.1,
             device    = config.device,
         )
@@ -193,109 +193,64 @@ class MISA(nn.Module):
             _, final_h2 = rnn2(packed2)
 
         return final_h1, final_h2                          # (dirs,B,H) , (dirs,B,H)
-
-
-    # =========================================================
-    # 2)  extract_features_seq   (επιστρέφει ΟΛΟ το seq + hidden)
-    # =========================================================
-    def extract_features_seq(self, x, lengths, rnn1, rnn2, layer_norm):
-        """
-        Επιστρέφει:
-            seq  : (B, L, H)  – ολόκληρη η κανονικοποιημένη ακολουθία
-            h2   : (B, H)     – τελικό hidden (με squeeze των dirs & layers)
-        """
-        lengths     = lengths.clamp(min=1, max=x.size(1))
-        cpu_l       = lengths.cpu().long()
-
-        # 1ο BiRNN -------------------------------------------------------------
-        packed1 = pack_padded_sequence(x, cpu_l,
-                                    batch_first=True, enforce_sorted=False)
-        out1, _ = rnn1(packed1)
-        seq, _  = pad_packed_sequence(out1, batch_first=True)   # (B,L,H)
-        seq     = layer_norm(seq)
-
-        # 2ο BiRNN -------------------------------------------------------------
-        packed2 = pack_padded_sequence(seq, cpu_l,
-                                    batch_first=True, enforce_sorted=False)
-        if self.config.rnncell == "lstm":
-            _, (h2, _) = rnn2(packed2)   # h2: (dirs, B, H)
-        else:
-            _, h2 = rnn2(packed2)
-
-        return seq, h2.squeeze(0)         # (B,L,H) , (B,H)
-
     
     
     def alignment(self, sentences, visual, acoustic, lengths, len_t, len_v, len_a,
                   bert_sent, bert_type, bert_mask):
         
-        # Stage I: extract full sequences + states
-        # print("sentences shape:", sentences.shape)
-        # print("visual shape:", visual.shape)
-        # print("acoustic shape:", acoustic.shape)
-        # print("lengths shape:", lengths.shape)
-        # print("len_t shape:", len_t.shape)
-        # print("len_v shape:", len_v.shape)
-        # print("len_a shape:", len_a.shape)
-        # print("bert_sent shape:", bert_sent.shape)
-        # print("bert_type shape:", bert_type.shape)
-        # print("bert_mask shape:", bert_mask.shape)
+        batch_size = lengths.size(0)
 
         if self.config.use_bert:
-            bert_out = self.bertmodel(
+            # 1.a BERT contextual output (με specials)
+            bert_ctx = self.bertmodel(
                 input_ids=bert_sent,
                 attention_mask=bert_mask,
                 token_type_ids=bert_type,
                 return_dict=True
-            ).last_hidden_state
-            if self.config.use_bert:
-                # WordPiece + position + segment embeddings: (B, L, 768)
-                raw_t = self.bertmodel.embeddings(
-                    input_ids      = bert_sent,
-                    token_type_ids = bert_type
-                )
-            else:
-                # GloVe ή word2vec embeddings: (B, L, embedding_size)
-                raw_t = self.embed(sentences)   
-            
-            # raw_t: (B, 77, 768)
-            raw_t_nospecial = raw_t[:, 1:-1, :]          # (B, 75, 768)
+            ).last_hidden_state                             # (B, 77, 768)
 
-            # seq_t_out (contextualised) έχει επίσης 77 → κόψε το ίδιο
-            seq_t_ctx = bert_out[:, 1:-1, :]             # (B, 75, 768)
-            #κόβουμε ειδικούς χαρακτήσες του language model
+            # 1.b Raw BERT embeddings (WordPiece + position + segment)
+            raw_t = self.bertmodel.embeddings(
+                input_ids=bert_sent,
+                token_type_ids=bert_type
+            )                                               # (B, 77, 768)
 
+            # 1.c Κόβουμε [CLS]/[SEP] για raw & ctx
+            raw_t = raw_t[:, 1:-1, :]                       # (B, L, 768)
+            ctx_t = bert_ctx[:, 1:-1, :]                    # (B, L, 768)
+            mask_t = bert_mask[:, 1:-1]                     # (B, L)
 
-            mask_len = bert_mask.sum(1, keepdim=True)
-            seq_t = (bert_out * bert_mask.unsqueeze(2)).sum(1) / mask_len
-            seq_t = seq_t.unsqueeze(1)
-            h1_t, h2_t = None, seq_t.squeeze(1)
-            # print(seq_t.shape, "Shape of seq text")
+            # 1.d Utterance-level RAW = masked mean των raw embed
+            raw_t_mean = (raw_t * mask_t.unsqueeze(2)).sum(1) / mask_t.sum(1, keepdim=True)
+            # (B, 768)
+
+            # 1.e Utterance-level CONTEXTUAL = masked mean των ctx
+            utterance_text = (ctx_t * mask_t.unsqueeze(2)).sum(1) / mask_t.sum(1, keepdim=True)
+            # (B, 768)
         else:
-            emb_t = self.embed(sentences)
-            seq_t, h2_t = self.extract_features_seq(
-                emb_t, len_t, self.trnn1, self.trnn2, self.tlayer_norm)
-            h1_t = None  # unused
-
-        seq_v, h2_v = self.extract_features_seq(
-            visual, len_v, self.vrnn1, self.vrnn2, self.vlayer_norm)
-        h1_v = None
+            emb_t = self.embed(sentences)                   # (B, L, D)
+            seq_t, _ = self.extract_features_seq(
+                emb_t, lengths, self.trnn1, self.trnn2, self.tlayer_norm)
+            raw_t_mean     = emb_t.mean(1)                  # (B, D)
+            utterance_text = seq_t.mean(1)                  # (B, 768)
+            
+        final_h1v, final_h2v = self.extract_features(visual, lengths, self.vrnn1, self.vrnn2, self.vlayer_norm)
+        utterance_video = torch.cat((final_h1v, final_h2v), dim=2).permute(1, 0, 2).contiguous().view(batch_size, -1)
         # print(seq_v.shape, "Shape of seq visual")
 
-        seq_a, h2_a = self.extract_features_seq(
-            acoustic, len_a, self.arnn1, self.arnn2, self.alayer_norm)
-        h1_a = None
+        final_h1a, final_h2a = self.extract_features(acoustic, lengths, self.arnn1, self.arnn2, self.alayer_norm)
+        utterance_audio = torch.cat((final_h1a, final_h2a), dim=2).permute(1, 0, 2).contiguous().view(batch_size, -1)
         # print(seq_a.shape, "Shape of seq acoustic")
 
         # seq_t_out = bert_out
         # --- MMLatch feedback on sequences ---
         seq_t, seq_a, seq_v = self.feedback(
-            low_x = raw_t_nospecial,   # (B,75,768)
+            low_x = raw_t,   # (B,75,768)
             low_y = acoustic,          # (B,75,74)
             low_z = visual,            # (B,75,35)
-            hi_x  = seq_t_ctx,         # (B,75,768)
-            hi_y  = seq_a,             # (B,75,148)
-            hi_z  = seq_v,             # (B,75,70)
+            hi_x  = utterance_text,         # (B,75,768)
+            hi_y  = utterance_audio,             # (B,75,148)
+            hi_z  = utterance_video,             # (B,75,70)
             lengths = len_t            # len_t == 75
         )
 
