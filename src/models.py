@@ -64,14 +64,14 @@ class MISA(nn.Module):
         self.project_v = nn.Sequential(
             nn.Linear(in_features=self.visual_size * 2,  # 2×47 = 94
                     out_features=config.hidden_size),
-            nn.RELU(),
+            nn.ReLU(),
             nn.LayerNorm(config.hidden_size)
         )
 
         self.project_a = nn.Sequential(
             nn.Linear(in_features=self.acoustic_size * 2,  # 2×74 = 148
                     out_features=config.hidden_size),
-            nn.RELU(),
+            nn.ReLU(),
             nn.LayerNorm(config.hidden_size)
         )
 
