@@ -140,6 +140,23 @@ class MISA(nn.Module):
             dropout   = 0.1,
             device    = config.device,
         )
+        self.mlp_t = nn.Sequential(
+            nn.Linear(self.text_size, self.config.hidden_size),
+            nn.GELU(),
+            nn.LayerNorm(self.config.hidden_size)
+        )
+
+        self.mlp_a = nn.Sequential(
+            nn.Linear(self.acoustic_size*2, self.config.hidden_size),   # 148→H
+            nn.GELU(),
+            nn.LayerNorm(self.config.hidden_size)
+        )
+
+        self.mlp_v = nn.Sequential(
+            nn.Linear(self.visual_size*2, self.config.hidden_size),     # 94→H
+            nn.GELU(),
+            nn.LayerNorm(self.config.hidden_size)
+        )
     
     # def extract_features(self, sequence, lengths, rnn1, rnn2, layer_norm):
     #     # move lengths to CPU and ensure it's long\
@@ -226,8 +243,8 @@ class MISA(nn.Module):
 
     
     
-    def alignment(self, sentences, visual, acoustic, lengths, len_t, len_v, len_a,
-                  bert_sent, bert_type, bert_mask):
+    # def alignment(self, sentences, visual, acoustic, lengths, len_t, len_v, len_a,
+    #               bert_sent, bert_type, bert_mask):
         
         # Stage I: extract full sequences + states
         # print("sentences shape:", sentences.shape)
@@ -241,62 +258,49 @@ class MISA(nn.Module):
         # print("bert_type shape:", bert_type.shape)
         # print("bert_mask shape:", bert_mask.shape)
 
+    def alignment(self,
+                sentences, visual, acoustic,
+                lengths, len_t, len_v, len_a,
+                bert_sent, bert_type, bert_mask):
+
+        B = sentences.size(0)                     # batch
+
+        # ---------- TEXT ---------------------------------------------------
         if self.config.use_bert:
-            bert_out = self.bertmodel(
-                input_ids=bert_sent,
-                attention_mask=bert_mask,
-                token_type_ids=bert_type,
-                return_dict=True
-            ).last_hidden_state
-            if self.config.use_bert:
-                # WordPiece + position + segment embeddings: (B, L, 768)
-                raw_t = self.bertmodel.embeddings(
-                    input_ids      = bert_sent,
-                    token_type_ids = bert_type
-                )
-            else:
-                # GloVe ή word2vec embeddings: (B, L, embedding_size)
-                raw_t = self.embed(sentences)   
-            
-            # raw_t: (B, 77, 768)
-            raw_t_nospecial = raw_t[:, 1:-1, :]          # (B, 75, 768)
+            bert_out = self.bertmodel(input_ids      = bert_sent,
+                                    attention_mask = bert_mask,
+                                    token_type_ids = bert_type,
+                                    return_dict=True).last_hidden_state      # (B,77,768)
 
-            # seq_t_out (contextualised) έχει επίσης 77 → κόψε το ίδιο
-            seq_t_ctx = bert_out[:, 1:-1, :]             # (B, 75, 768)
-            #κόβουμε ειδικούς χαρακτήσες του language model
+            raw_t = self.bertmodel.embeddings(input_ids      = bert_sent,
+                                            token_type_ids = bert_type)      # (B,77,768)
 
+            low_t = raw_t[:, 1:-1, :]                 # (B,75,768)  χωρίς CLS/SEP
+            hi_t  = self.mlp_t(bert_out[:, 1:-1, :])  # (B,75,H)
+        else:                                         # μη-BERT περίπτωση
+            emb_t, _ = self.extract_features_seq(
+                self.embed(sentences), len_t,
+                self.trnn1, self.trnn2, self.tlayer_norm)
+            hi_t  = self.mlp_t(emb_t)                 # (B,75,H)
+            low_t = emb_t                            # (B,75,emb)
 
-            mask_len = bert_mask.sum(1, keepdim=True)
-            seq_t = (bert_out * bert_mask.unsqueeze(2)).sum(1) / mask_len
-            seq_t = seq_t.unsqueeze(1)
-            h1_t, h2_t = None, seq_t.squeeze(1)
-            # print(seq_t.shape, "Shape of seq text")
-        else:
-            emb_t = self.embed(sentences)
-            seq_t, h2_t = self.extract_features_seq(
-                emb_t, len_t, self.trnn1, self.trnn2, self.tlayer_norm)
-            h1_t = None  # unused
-
-        seq_v, h2_v = self.extract_features_seq(
+        # ---------- VISION --------------------------------------------------
+        seq_v, _ = self.extract_features_seq(
             visual, len_v, self.vrnn1, self.vrnn2, self.vlayer_norm)
-        h1_v = None
-        # print(seq_v.shape, "Shape of seq visual")
+        hi_v  = self.mlp_v(seq_v)                     # (B,75,H)
+        low_v = visual                               # (B,75,35)
 
-        seq_a, h2_a = self.extract_features_seq(
+        # ---------- ACOUSTIC ------------------------------------------------
+        seq_a, _ = self.extract_features_seq(
             acoustic, len_a, self.arnn1, self.arnn2, self.alayer_norm)
-        h1_a = None
-        # print(seq_a.shape, "Shape of seq acoustic")
+        hi_a  = self.mlp_a(seq_a)                     # (B,75,H)
+        low_a = acoustic                             # (B,75,74)
 
-        # seq_t_out = bert_out
-        # --- MMLatch feedback on sequences ---
+        # ---------- FEEDBACK -----------------------------------------------
         seq_t, seq_a, seq_v = self.feedback(
-            low_x = raw_t_nospecial,   # (B,75,768)
-            low_y = acoustic,          # (B,75,74)
-            low_z = visual,            # (B,75,35)
-            hi_x  = seq_t_ctx,         # (B,75,768)
-            hi_y  = seq_a,             # (B,75,148)
-            hi_z  = seq_v,             # (B,75,70)
-            lengths = len_t            # len_t == 75
+            low_x = low_t, low_y = low_a, low_z = low_v,
+            hi_x  = hi_t,  hi_y  = hi_a,  hi_z  = hi_v,
+            lengths = len_t                                   # όλα 75
         )
 
 
