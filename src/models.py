@@ -62,20 +62,19 @@ class MISA(nn.Module):
             self.project_t.add_module('project_t_layer_norm', nn.LayerNorm(config.hidden_size))
 
         self.project_v = nn.Sequential(
-            nn.Linear(in_features=140,
-                    out_features=config.hidden_size), # hidden_size is 128 by default
-            nn.ReLU(),
-            nn.LayerNorm(config.hidden_size)
+            nn.Linear(in_features=self.visual_size * 2,  # 94 → out
+                    out_features=self.visual_size * 2),
+            self.activation,
+            nn.LayerNorm(self.visual_size * 2)
         )
-
 
         self.project_a = nn.Sequential(
-            nn.Linear(in_features=296,
-                    out_features=config.hidden_size), # hidden_size is 128 by default
-            nn.ReLU(),
-            nn.LayerNorm(config.hidden_size)
+            nn.Linear(in_features=self.acoustic_size * 2,  # 148 → out
+                    out_features=self.acoustic_size * 2),
+            self.activation,
+            nn.LayerNorm(self.acoustic_size * 2)
         )
-
+        
         # --- private encoders ---
         self.private_t = nn.Sequential()
         self.private_t.add_module('private_t_1', nn.Linear(in_features=config.hidden_size, out_features=config.hidden_size))
