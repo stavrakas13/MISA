@@ -1,0 +1,45 @@
+name: misa-code-py39-gpu
+channel_priority: strict
+channels:
+  - pytorch
+  - conda-forge
+  - defaults
+
+dependencies:
+  # ── Core ─────────────────────────────
+  - python        =3.9
+  - pytorch      =1.10       # GPU‐enabled build
+  - torchvision  =0.11       # matches PyTorch 1.10 GPU
+  - torchaudio   =0.10       # matches PyTorch 1.10 GPU
+  - cudatoolkit  =11.3       # CUDA runtime for GPU builds
+  - pip
+
+  # ── Numeric / ML stack ───────────────
+  - numpy        =1.26.*
+  - scipy        =1.12.*
+  - pandas       =2.2.*
+  - scikit-learn =1.4.*
+  - scikit-image =0.22.*
+  - matplotlib   =3.9.*
+  - pillow
+  - cython
+
+  # ── NLP / utilities ───────────────────
+  - spacy        =3.7.*
+  - filelock                   # needed by Transformers
+  - fsspec                     # needed by datasets
+
+  # ── pip-only packages (no deps) ──────
+  - pip:
+      - allennlp==2.10.*
+      - allennlp-models==2.10.*
+      - transformers==4.20.*
+      - datasets<2.8,>=2.7     # compatible with cached-path 1.1.6
+      - cached-path==1.1.6
+      - seaborn
+      - jupyterlab
+      - notebook
+      - ipykernel
+      - ipython
+      - tqdm>=4.67
+      - requests>=2.31
