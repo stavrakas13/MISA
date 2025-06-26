@@ -239,7 +239,7 @@ class Feedback(nn.Module):
                  mask_type="learnable_sequence_mask",
                  dropout=0.1,
                  device="cpu",
-                 memory_augmented=memory_augmented):
+                 memory_augmented=False):
         super().__init__()
 
         dt, da, dv = hi_dims     # 768, 148, 94        (π.χ.)
