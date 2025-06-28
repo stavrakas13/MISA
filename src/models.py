@@ -89,15 +89,28 @@ class MISA(nn.Module):
         self.shared.add_module('shared_1', nn.Linear(in_features=config.hidden_size, out_features=config.hidden_size))
         self.shared.add_module('shared_activation_1', nn.Sigmoid())
 
-        ##########################################
-        # reconstruct
-        ##########################################
-        self.recon_t = nn.Sequential()
-        self.recon_t.add_module('recon_t_1', nn.Linear(in_features=config.hidden_size, out_features=config.hidden_size))
-        self.recon_v = nn.Sequential()
-        self.recon_v.add_module('recon_v_1', nn.Linear(in_features=config.hidden_size, out_features=config.hidden_size))
-        self.recon_a = nn.Sequential()
-        self.recon_a.add_module('recon_a_1', nn.Linear(in_features=config.hidden_size, out_features=config.hidden_size))
+        # ##########################################
+        # # reconstruct
+        # ##########################################
+        # self.recon_t = nn.Sequential()
+        # self.recon_t.add_module('recon_t_1', nn.Linear(in_features=config.hidden_size, out_features=config.hidden_size))
+        # self.recon_v = nn.Sequential()
+        # self.recon_v.add_module('recon_v_1', nn.Linear(in_features=config.hidden_size, out_features=config.hidden_size))
+        # self.recon_a = nn.Sequential()
+        # self.recon_a.add_module('recon_a_1', nn.Linear(in_features=config.hidden_size, out_features=config.hidden_size))
+
+                
+        self.recon_t = nn.Sequential(
+            nn.Linear(in_features=config.hidden_size, out_features=self.text_size),
+        )
+
+        self.recon_v = nn.Sequential(
+            nn.Linear(in_features=config.hidden_size, out_features=self.visual_size),
+        )
+
+        self.recon_a = nn.Sequential(
+            nn.Linear(in_features=config.hidden_size, out_features=self.acoustic_size),
+        )
 
         # --- discriminators ---
         if not config.use_cmd_sim:

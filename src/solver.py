@@ -374,25 +374,32 @@ class Solver(object):
         loss = loss/3.0
         return loss
 
-    def gated_recon_loss(self, crit=nn.MSELoss()):
-        """MSE( gated-raw , gated-reconstruction ) για κάθε modality"""
-        # utt_*_recon: (B, H)  →  χρειάζεται επέκταση στον άξονα L
-        m_t = self.mask_t                         # (B,L,1)
-        m_a = self.mask_a
-        m_v = self.mask_v
+    def gated_recon_loss(self, crit=torch.nn.MSELoss()):
+        """
+        MSE( gated-raw , gated-reconstruction ) για Text / Audio / Vision
+            model.mask_t , model.raw_t_masked , model.utt_t_recon  κ.λπ.
+        """
+        # ───────────────────────── masks ─────────────────────────
+        m_t = self.model.mask_t                     # (B, L, 1)
+        m_a = self.model.mask_a
+        m_v = self.model.mask_v
 
-        # === TEXT ===
-        utt_t_rec = self.utt_t_recon.unsqueeze(1).expand_as(self.raw_t_masked)
-        loss_t = crit(utt_t_rec * m_t, self.raw_t_masked)
+        # ─────────────────────── TEXT branch ─────────────────────
+        utt_t_rec = self.model.utt_t_recon.unsqueeze(1).expand_as(
+                        self.model.raw_t_masked)
+        loss_t = crit(utt_t_rec * m_t, self.model.raw_t_masked)
 
-        # === AUDIO ===
-        utt_a_rec = self.utt_a_recon.unsqueeze(1).expand_as(self.raw_a_masked)
-        loss_a = crit(utt_a_rec * m_a, self.raw_a_masked)
+        # ─────────────────────── AUDIO branch ────────────────────
+        utt_a_rec = self.model.utt_a_recon.unsqueeze(1).expand_as(
+                        self.model.raw_a_masked)
+        loss_a = crit(utt_a_rec * m_a, self.model.raw_a_masked)
 
-        # === VISION ===
-        utt_v_rec = self.utt_v_recon.unsqueeze(1).expand_as(self.raw_v_masked)
-        loss_v = crit(utt_v_rec * m_v, self.raw_v_masked)
+        # ─────────────────────── VISION branch ───────────────────
+        utt_v_rec = self.model.utt_v_recon.unsqueeze(1).expand_as(
+                        self.model.raw_v_masked)
+        loss_v = crit(utt_v_rec * m_v, self.model.raw_v_masked)
 
+        # ───────────────────────── return ────────────────────────
         return (loss_t + loss_a + loss_v) / 3.0
 
 
