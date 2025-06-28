@@ -126,7 +126,8 @@ class Solver(object):
                 cls_loss = criterion(y_tilde, y)
                 diff_loss = self.get_diff_loss()
                 domain_loss = self.get_domain_loss()
-                recon_loss = self.get_recon_loss()
+                # recon_loss = self.get_recon_loss()
+                recon_loss = self.gated_recon_loss()
                 cmd_loss = self.get_cmd_loss()
                 
                 if self.train_config.use_cmd_sim:
@@ -373,7 +374,26 @@ class Solver(object):
         loss = loss/3.0
         return loss
 
+    def gated_recon_loss(self, crit=nn.MSELoss()):
+        """MSE( gated-raw , gated-reconstruction ) για κάθε modality"""
+        # utt_*_recon: (B, H)  →  χρειάζεται επέκταση στον άξονα L
+        m_t = self.mask_t                         # (B,L,1)
+        m_a = self.mask_a
+        m_v = self.mask_v
 
+        # === TEXT ===
+        utt_t_rec = self.utt_t_recon.unsqueeze(1).expand_as(self.raw_t_masked)
+        loss_t = crit(utt_t_rec * m_t, self.raw_t_masked)
+
+        # === AUDIO ===
+        utt_a_rec = self.utt_a_recon.unsqueeze(1).expand_as(self.raw_a_masked)
+        loss_a = crit(utt_a_rec * m_a, self.raw_a_masked)
+
+        # === VISION ===
+        utt_v_rec = self.utt_v_recon.unsqueeze(1).expand_as(self.raw_v_masked)
+        loss_v = crit(utt_v_rec * m_v, self.raw_v_masked)
+
+        return (loss_t + loss_a + loss_v) / 3.0
 
 
 

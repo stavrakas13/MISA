@@ -289,7 +289,7 @@ class MISA(nn.Module):
 
         # seq_t_out = bert_out
         # --- MMLatch feedback on sequences ---
-        seq_t, seq_a, seq_v = self.feedback(
+        seq_t, m_t, seq_a, m_a, seq_v, m_v = self.feedback(
             low_x = raw_t_nospecial,   # (B,75,768)
             low_y = acoustic,          # (B,75,74)
             low_z = visual,            # (B,75,35)
@@ -300,6 +300,12 @@ class MISA(nn.Module):
         )
 
 
+                # Κρατάμε για loss:
+        self.mask_t, self.mask_a, self.mask_v = m_t, m_a, m_v
+        self.raw_t_masked = raw_t_nospecial * m_t        # (B,L,768)
+        self.raw_a_masked = acoustic        * m_a        # (B,L,74)
+        self.raw_v_masked = visual          * m_v        # (B,L,35)
+        
         pad_cls = raw_t[:, :1, :]      # (B,1,768)
         pad_sep = raw_t[:, -1:, :]
         seq_t_full = torch.cat([pad_cls, seq_t, pad_sep], dim=1)   # (B,77,768)

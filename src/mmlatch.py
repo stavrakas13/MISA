@@ -206,7 +206,7 @@ class FeedbackUnit(nn.Module):
         mask = F.dropout(
             self._mask_fn(y, z, lengths), p=self.dropout, training=self.training
         )                                     # (B, L, out_dim)
-        return x * mask
+        return x * mask, mask
 
 # ============================================================
 #                 F E E D B A C K    B L O C K
@@ -248,7 +248,7 @@ class Feedback(nn.Module):
         Επιστρέφει τα low-seq αφού εφαρμοστούν οι αντίστοιχες μάσκες.
         Όλες οι ακολουθίες υποθέτουμε ότι έχουν κοινά μήκη `lengths` (B,).
         """
-        x = self.f_t(low_x, hi_y, hi_z, lengths)   # text  ← (audio, vision)
-        y = self.f_a(low_y, hi_x, hi_z, lengths)   # audio ← (text , vision)
-        z = self.f_v(low_z, hi_x, hi_y, lengths)   # vision← (text , audio)
-        return x, y, z
+        x, mask_x= self.f_t(low_x, hi_y, hi_z, lengths)   # text  ← (audio, vision)
+        y, mask_y = self.f_a(low_y, hi_x, hi_z, lengths)   # audio ← (text , vision)
+        z, mask_z = self.f_v(low_z, hi_x, hi_y, lengths)   # vision← (text , audio)
+        return x, mask_x, y, mask_y, z, mask_z
