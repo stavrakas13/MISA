@@ -1,0 +1,34 @@
+Experimental Setup Analysis
+
+This section describes the experimental setup used for training and evaluating the MISA model.
+
+**Hardware and Platform**
+
+All experiments were conducted on Google Colab, utilizing an NVIDIA T4 GPU. This environment provides a standardized and reproducible platform for deep learning research, with sufficient computational resources for training transformer-based and multimodal models.
+
+**Model Configuration**
+
+- **Hidden Size:** The hidden size for all projection and shared/private layers was set to 148. This value was chosen to balance model expressiveness and computational efficiency.
+- **Patience:** Early stopping was employed with a patience value of 10. Training was halted if the validation loss did not improve for 10 consecutive epochs, helping to prevent overfitting.
+- **Other Hyperparameters:** All other hyperparameters, such as learning rate, optimizer, batch size, dropout rate, and activation functions, were set according to the default values specified in the codebase. Notably, the model uses a two-layer bidirectional RNN for each modality, and BERT embeddings for the text modality when enabled.
+
+**Data and Preprocessing**
+
+- The datasets used (e.g., MOSI, MOSEI, UR_FUNNY) were preprocessed as described in the code, including tokenization, padding, and alignment of modalities.
+- For text, BERT tokenization and embeddings were used when `use_bert=True`.
+- Visual and acoustic features were z-normalized per instance.
+
+**Training Procedure**
+
+- The model was trained using the Adam optimizer with the learning rate and batch size as defined in the configuration.
+- Loss functions included classification/regression loss, domain adversarial loss, difference loss, and reconstruction loss, combined as per the code's loss weighting scheme.
+- Model checkpoints were saved based on the best validation performance.
+
+**Reproducibility**
+
+- Random seeds were set for NumPy and PyTorch to ensure reproducibility.
+- All code and configuration files are available in the repository, and the environment can be recreated using the provided `environment.yml` or `env_gpu.yml` files.
+
+**Summary**
+
+This setup ensures a fair and reproducible evaluation of the MISA model under realistic computational constraints, with hyperparameters and training protocols aligned with standard practices in multimodal sentiment analysis research.
