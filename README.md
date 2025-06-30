@@ -68,10 +68,13 @@ See [`MISA_GPU.ipynb`](MISA_GPU.ipynb) for a step-by-step setup, including envir
 
 By changing the variable **branch** that appears twice you can run the different version of MISA+MMLatch.
 
-Versions:
+Versions (and their respective branch):
 
--
-- MISA Reproduction
+- Feedback after Feature Extraction (best model) = master, diff_dim
+- Feedback after private encoding phase = mpl_seq
+- Feedback with static masks after Feat. Extr. = static_masks
+- Feedback with static masks after private encoding = static_after_mlp
+- MISA Reproduction = reprod_py39
 
 **Notebook workflow:**
 1. Clone the repository and set up the environment.
@@ -88,7 +91,7 @@ Versions:
 ---
 ## Report
 
-The report of research on MMLatch which is part of a team project, you can find it here (https://github.com/alexisfilippakopoulos/mmlatch). My contribution is integrating MMlatch on MISA. 
+The report of research on MMLatch which is part of a team project with more info about the architecture, the result and other related research, you can find it here (https://github.com/alexisfilippakopoulos/mmlatch). My contribution is integrating MMlatch on MISA. 
 
 ## Citation
 
