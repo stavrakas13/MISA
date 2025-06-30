@@ -66,6 +66,13 @@ python train.py --data mosei --patience 4
 You can run the model end-to-end in a Jupyter or VSCode notebook.  
 See [`MISA_GPU.ipynb`](MISA_GPU.ipynb) for a step-by-step setup, including environment creation, data download, and training.
 
+By changing the variable **branch** that appears twice you can run the different version of MISA+MMLatch.
+
+Versions:
+
+-
+- MISA Reproduction
+
 **Notebook workflow:**
 1. Clone the repository and set up the environment.
 2. Download and prepare datasets.
@@ -76,13 +83,14 @@ See [`MISA_GPU.ipynb`](MISA_GPU.ipynb) for a step-by-step setup, including envir
 
 ## Results
 
-> _Leave this section to share your experimental results, tables, and figures._
+![image](https://github.com/user-attachments/assets/d7c61c73-48ce-427d-9896-1c1e5b7d15b9)
 
 ---
+## Report
+
+The report of research on MMLatch which is part of a team project, you can find it here (https://github.com/alexisfilippakopoulos/mmlatch). My contribution is integrating MMlatch on MISA. 
 
 ## Citation
-
-If you use this code or the MMLatch extension, please cite:
 
 ```
 @article{hazarika2020misa,
@@ -92,7 +100,16 @@ If you use this code or the MMLatch extension, please cite:
   year={2020}
 }
 ```
-And cite the MMLatch block if you use the feedback mechanism.
+@INPROCEEDINGS{9746418,
+  author={Paraskevopoulos, Georgios and Georgiou, Efthymios and Potamianos, Alexandras},
+  booktitle={ICASSP 2022 - 2022 IEEE International Conference on Acoustics, Speech and Signal Processing (ICASSP)}, 
+  title={Mmlatch: Bottom-Up Top-Down Fusion For Multimodal Sentiment Analysis}, 
+  year={2022},
+  volume={},
+  number={},
+  pages={4573-4577},
+  doi={10.1109/ICASSP43922.2022.9746418}
+}
 
 ---
 
