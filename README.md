@@ -91,7 +91,7 @@ Versions (and their respective branch):
 ---
 ## Report
 
-The report of research on MMLatch which is part of a team project with more info about the architecture, the result and other related research, you can find it here (https://github.com/alexisfilippakopoulos/mmlatch). My contribution is integrating MMlatch on MISA. 
+The report of project on MMLatch which is part of a team project with more info about the architecture, the result and other related experiments, you can find it here (https://github.com/alexisfilippakopoulos/mmlatch). My contribution is integrating MMlatch on MISA. 
 
 ## Citation
 
