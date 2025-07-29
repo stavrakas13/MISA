@@ -1,6 +1,6 @@
 # MISA+MMLatch: Modality-Invariant and -Specific Representations with Feedback for Multimodal Sentiment Analysis
 
-This repository extends the original [MISA](https://arxiv.org/pdf/2005.03545.pdf) model by integrating the **MMLatch** feedback mechanism, enabling improved cross-modal alignment and information flow for multimodal sentiment analysis.
+This repository extends the original [MISA](https://arxiv.org/pdf/2005.03545.pdf) (Hazarika et al, 2020) model by integrating the **MMLatch** (feedback mechanism, enabling improved cross-modal alignment and information flow for multimodal sentiment analysis (Paraskevopoulos et al, 2022).
 
 ---
 
@@ -98,10 +98,11 @@ The report of project on MMLatch which is part of a team project with more info 
 ```
 @article{hazarika2020misa,
   title={MISA: Modality-Invariant and-Specific Representations for Multimodal Sentiment Analysis},
-  author={Hazarika, Devamanyu and Zimmermann, Roger and Poria, Soujanya},
+  author={, Devamanyu and Zimmermann, Roger and Poria, Soujanya},
   journal={arXiv preprint arXiv:2005.03545},
   year={2020}
 }
+```
 ```
 @INPROCEEDINGS{9746418,
   author={Paraskevopoulos, Georgios and Georgiou, Efthymios and Potamianos, Alexandras},
@@ -113,7 +114,7 @@ The report of project on MMLatch which is part of a team project with more info 
   pages={4573-4577},
   doi={10.1109/ICASSP43922.2022.9746418}
 }
-
+```
 ---
 
 ## Notes & Tips
